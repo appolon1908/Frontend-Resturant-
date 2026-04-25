@@ -3,6 +3,7 @@ definePageMeta({ layout: 'customer' })
 const route = useRoute()
 const customer = useCustomerStore()
 const { createReservation } = useReservations()
+const { handleApiError } = useAuth()
 const partySize = ref(2)
 const reservationTime = ref('')
 const message = ref('')
@@ -11,8 +12,8 @@ const loading = ref(true)
 
 try {
   await customer.fetchRestaurant(String(route.params.slug))
-} catch {
-  error.value = 'Restaurant details failed to load.'
+} catch (err) {
+  error.value = handleApiError(err, 'Restaurant details failed to load.')
 } finally {
   loading.value = false
 }
@@ -24,15 +25,15 @@ async function reserve() {
   try {
     await createReservation({ restaurant: customer.selectedRestaurant.id, party_size: Number(partySize.value), reservation_time: reservationTime.value })
     message.value = 'Reservation request submitted successfully.'
-  } catch {
-    error.value = 'Unable to submit reservation at this time.'
+  } catch (err) {
+    error.value = handleApiError(err, 'Unable to submit reservation at this time.')
   }
 }
 </script>
 
 <template>
   <section class="space-y-4">
-    <div v-if="loading" class="py-10 text-center"><AppSpinner /></div>
+    <AppSkeleton v-if="loading" :lines="5" />
     <p v-else-if="error && !customer.selectedRestaurant" class="error-banner">{{ error }}</p>
 
     <template v-else-if="customer.selectedRestaurant">

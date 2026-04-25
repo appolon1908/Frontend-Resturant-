@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'customer' })
 const cart = useCartStore()
+const { handleApiError } = useAuth()
 const paymentMethod = ref('card')
 const message = ref('')
 const error = ref('')
@@ -13,8 +14,8 @@ async function checkout() {
   try {
     await cart.checkout(paymentMethod.value)
     message.value = 'Checkout complete. Your order has been placed.'
-  } catch {
-    error.value = 'Checkout failed. Please try again.'
+  } catch (err) {
+    error.value = handleApiError(err, 'Checkout failed. Please try again.')
   } finally {
     paying.value = false
   }
@@ -25,9 +26,12 @@ async function checkout() {
   <section class="space-y-4">
     <h1 class="section-title">Checkout</h1>
     <AppCard>
-      <p class="mb-2 text-sm text-slate-600">Items: {{ cart.totalItems }}</p>
-      <p class="mb-4 text-lg font-semibold">Subtotal: ${{ cart.subtotal.toFixed(2) }}</p>
-      <AppInput v-model="paymentMethod" label="Payment method" hint="Example: card, apple_pay" />
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Order summary</h2>
+      <div class="space-y-1 text-sm text-slate-600">
+        <p>Items: {{ cart.totalItems }}</p>
+        <p class="text-lg font-semibold text-slate-900">Subtotal: ${{ cart.subtotal.toFixed(2) }}</p>
+      </div>
+      <AppInput v-model="paymentMethod" class="mt-3" label="Payment method" hint="Example: card, apple_pay" />
       <AppButton class="mt-3" :loading="paying" :disabled="cart.totalItems === 0" @click="checkout">Pay now</AppButton>
       <p v-if="error" class="error-banner mt-3">{{ error }}</p>
       <p v-if="message" class="success-banner mt-3">{{ message }}</p>

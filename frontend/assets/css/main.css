@@ -28,10 +28,29 @@ body {
   @apply text-2xl font-bold tracking-tight;
 }
 
+.section-subtitle {
+  @apply mt-1 text-sm text-slate-500;
+}
+
 .error-banner {
   @apply rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700;
 }
 
 .success-banner {
   @apply rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700;
+}
+
+.card-grid {
+  @apply grid gap-4 md:gap-5;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }

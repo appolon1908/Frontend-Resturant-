@@ -8,7 +8,7 @@ const links = [
 </script>
 
 <template>
-  <div class="min-h-screen pb-[calc(78px+env(safe-area-inset-bottom))]">
+  <div class="min-h-screen bg-slate-50 pb-[calc(82px+env(safe-area-inset-bottom))]">
     <main class="page-shell py-4 md:py-6">
       <slot />
     </main>
@@ -20,7 +20,7 @@ const links = [
           :key="link.to"
           :to="link.to"
           class="flex flex-col items-center rounded-xl px-1 py-2 text-xs font-medium text-slate-500 transition"
-          active-class="bg-brand-50 text-brand-700"
+          active-class="bg-brand-50 text-brand-700 shadow-soft"
         >
           <span class="text-base">{{ link.icon }}</span>
           <span>{{ link.label }}</span>

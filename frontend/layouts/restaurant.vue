@@ -10,9 +10,10 @@ const links = [
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 md:grid md:grid-cols-[240px_1fr]">
+  <div class="min-h-screen bg-slate-50 md:grid md:grid-cols-[250px_1fr]">
     <aside class="hidden md:flex md:flex-col border-r border-slate-200 bg-white px-4 py-6">
-      <p class="mb-6 text-lg font-bold text-brand-700">Restaurant Admin</p>
+      <p class="mb-1 text-xs uppercase tracking-wide text-slate-400">Restaurant Booking</p>
+      <p class="mb-6 text-lg font-bold text-brand-700">Admin Console</p>
       <NuxtLink
         v-for="link in links"
         :key="link.to"
@@ -27,7 +28,10 @@ const links = [
     <main>
       <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur md:hidden">
         <div class="page-shell flex items-center justify-between py-3">
-          <p class="font-bold text-brand-700">Restaurant Admin</p>
+          <div>
+            <p class="text-xs uppercase tracking-wide text-slate-400">Restaurant Booking</p>
+            <p class="font-bold text-brand-700">Admin Console</p>
+          </div>
           <NuxtLink to="/restaurant/dashboard" class="text-sm font-medium text-brand-700">Dashboard</NuxtLink>
         </div>
       </header>
