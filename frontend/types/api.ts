@@ -133,3 +133,23 @@ export interface RefundCreateRequest {
   idempotency_key: string
   request_id: string
 }
+
+export type RealtimeEventType =
+  | 'reservation.created'
+  | 'reservation.updated'
+  | 'order.created'
+  | 'order.status_changed'
+  | 'kitchen.ticket_created'
+  | 'kitchen.ticket_ready'
+  | 'table.status_changed'
+  | 'payment.succeeded'
+  | 'waitlist.called'
+  | 'staff.alert_created'
+
+export interface RealtimeEventEnvelope {
+  type: RealtimeEventType
+  restaurant_id?: number
+  customer_id?: number
+  occurred_at?: string
+  payload: Record<string, unknown>
+}

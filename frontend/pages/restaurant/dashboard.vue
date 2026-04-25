@@ -1,23 +1,52 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'restaurant' })
 const restaurant = useRestaurantStore()
-const { handleApiError } = useAuth()
+const { auth, handleApiError } = useAuth()
+const { realtime, connect, disconnect } = useRealtime()
 const loading = ref(true)
 const error = ref('')
 
-try {
-  await restaurant.fetchDashboard()
-} catch (err) {
-  error.value = handleApiError(err, 'Unable to load dashboard.')
-} finally {
-  loading.value = false
+async function fetchDashboard() {
+  try {
+    await restaurant.fetchDashboard()
+  } catch (err) {
+    error.value = handleApiError(err, 'Unable to load dashboard.')
+  } finally {
+    loading.value = false
+  }
 }
+
+await fetchDashboard()
+
+const restaurantId = computed(() => Number(auth.user?.id || 0))
+if (import.meta.client && restaurantId.value) {
+  connect({ restaurantId: restaurantId.value })
+}
+
+watch(
+  () => realtime.lastEventType,
+  async (eventType) => {
+    if (['reservation.created', 'reservation.updated', 'order.created', 'order.status_changed', 'payment.succeeded'].includes(eventType)) {
+      await fetchDashboard()
+    }
+  },
+)
+
+onBeforeUnmount(() => {
+  disconnect()
+})
 </script>
 
 <template>
   <section class="space-y-4">
-    <h1 class="section-title">Dashboard</h1>
-    <p class="section-subtitle">Track today's booking and order performance.</p>
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="section-title">Dashboard</h1>
+        <p class="section-subtitle">Track today's booking and order performance.</p>
+      </div>
+      <AppBadge :tone="realtime.connected ? 'green' : 'orange'">{{ realtime.connected ? 'Live' : 'Offline' }}</AppBadge>
+    </div>
+
     <p v-if="error" class="error-banner">{{ error }}</p>
     <div v-else-if="loading" class="card-grid sm:grid-cols-2 xl:grid-cols-4">
       <AppSkeleton v-for="n in 4" :key="n" :lines="2" />
