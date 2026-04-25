@@ -69,10 +69,9 @@ cat package.json
 
 `nuxt` should appear in dependencies/devDependencies, and `npm ls nuxt` should resolve it from your local install.
 
-
 ## Product Flows
 
-- [Restaurant App User Journeys](./docs/restaurant-user-journeys.md)
+* [Restaurant App User Journeys](./docs/restaurant-user-journeys.md)
 
 ## Realtime behavior
 
