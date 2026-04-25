@@ -1,49 +1,52 @@
 # Frontend (Nuxt 3)
 
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+
 ## Setup
 
 ```bash
+cd frontend
+cp .env.example .env
 npm install
+```
+
+If your environment has stale proxy settings:
+
+```bash
+npm config delete proxy
+npm config delete https-proxy
 ```
 
 ## Environment
 
-Copy and edit env values:
+Required variable:
 
-```bash
-cp .env.example .env
-```
+- `NUXT_PUBLIC_API_BASE_URL` (example: `https://your-api-domain.com/api/v1`)
 
-Required:
-
-- `NUXT_PUBLIC_API_BASE_URL` - backend API base URL (example: `https://your-api-domain.com/api/v1`)
-
-## Run
+## Run locally
 
 ```bash
 npm run dev
 ```
 
-## Typecheck
+## Validation
 
 ```bash
 npm run typecheck
-```
-
-## Build
-
-```bash
 npm run build
-npm run preview
-```
-
-## Lint
-
-```bash
 npm run lint
 ```
 
-## Realtime integration contract
+## Realtime behavior
+
+Realtime is optional and resilient:
+
+- app works without websocket backend availability
+- websocket reconnect uses exponential backoff
+- live events enhance dashboard/orders/kitchen if backend channels are available
 
 Expected websocket routes from backend ASGI/Channels:
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { auth } = useAuth()
+
 const links = [
   { to: '/restaurant/dashboard', label: 'Dashboard' },
   { to: '/restaurant/reservations', label: 'Reservations' },
@@ -7,10 +9,23 @@ const links = [
   { to: '/restaurant/menu', label: 'Menu' },
   { to: '/restaurant/settings', label: 'Settings' },
 ]
+
+if (import.meta.client) {
+  watchEffect(() => {
+    if (!auth.isAuthenticated) {
+      navigateTo('/auth/login')
+      return
+    }
+
+    if (auth.user?.role === 'customer') {
+      navigateTo('/customer/home')
+    }
+  })
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 md:grid md:grid-cols-[250px_1fr]">
+  <div class="min-h-screen overflow-x-hidden bg-slate-50 md:grid md:grid-cols-[250px_1fr]">
     <aside class="hidden md:flex md:flex-col border-r border-slate-200 bg-white px-4 py-6">
       <p class="mb-1 text-xs uppercase tracking-wide text-slate-400">Restaurant Booking</p>
       <p class="mb-6 text-lg font-bold text-brand-700">Admin Console</p>

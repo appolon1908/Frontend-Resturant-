@@ -15,7 +15,9 @@ export function useRealtime() {
   const manualClose = useState('realtime-manual-close', () => false)
 
   function endpoint(scope: { restaurantId?: number; customerId?: number }) {
-    const base = wsBaseFromApiBase(String(config.public.apiBaseUrl || ''))
+    const apiBase = String(config.public.apiBaseUrl || '')
+    if (!apiBase) return ''
+    const base = wsBaseFromApiBase(apiBase)
     if (scope.restaurantId) return `${base}/ws/restaurant/${scope.restaurantId}/ops/`
     if (scope.customerId) return `${base}/ws/customer/${scope.customerId}/updates/`
     return ''
@@ -39,7 +41,7 @@ export function useRealtime() {
   }
 
   function connect(scope: { restaurantId?: number; customerId?: number }) {
-    if (!import.meta.client || !auth.token) return
+    if (!import.meta.client || !auth.token || typeof WebSocket === 'undefined') return
     const url = endpoint(scope)
     if (!url) return
 

@@ -1,14 +1,29 @@
 <script setup lang="ts">
+const { auth } = useAuth()
+
 const links = [
   { to: '/customer/home', label: 'Home', icon: '🏠' },
   { to: '/customer/reservations', label: 'Bookings', icon: '📅' },
   { to: '/customer/orders', label: 'Orders', icon: '🧾' },
   { to: '/customer/profile', label: 'Profile', icon: '👤' },
 ]
+
+if (import.meta.client) {
+  watchEffect(() => {
+    if (!auth.isAuthenticated) {
+      navigateTo('/auth/login')
+      return
+    }
+
+    if (auth.user?.role === 'restaurant' || auth.user?.role === 'admin') {
+      navigateTo('/restaurant/dashboard')
+    }
+  })
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 pb-[calc(82px+env(safe-area-inset-bottom))]">
+  <div class="min-h-screen overflow-x-hidden bg-slate-50 pb-[calc(82px+env(safe-area-inset-bottom))]">
     <main class="page-shell py-4 md:py-6">
       <slot />
     </main>

@@ -89,6 +89,7 @@ export const useAuthStore = defineStore('auth', {
         this.$reset()
         this.initialized = true
         this.persist()
+        if (import.meta.client) navigateTo('/auth/login')
         return 'Your session expired. Please log in again.'
       }
 
