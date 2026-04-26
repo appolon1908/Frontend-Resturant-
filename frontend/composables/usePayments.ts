@@ -1,19 +1,17 @@
 import { paymentsApi } from '~/api/payments'
 import type {
   Payment,
-  PaymentLedger,
   PaymentIntentCreateRequest,
   PaymentIntentResponse,
   PaymentSettleRequest,
-  PaymentStatus,
   PaymentRefundResponse,
   RefundCreateRequest,
 } from '~/types/api'
 
 export function usePayments() {
   const latestIntent = ref<PaymentIntentResponse | null>(null)
-  const latestPayment = ref<Payment | PaymentLedger | PaymentRefundResponse | null>(null)
-  const payments = ref<Array<Payment | PaymentLedger>>([])
+  const latestPayment = ref<Payment | PaymentRefundResponse | null>(null)
+  const payments = ref<Payment[]>([])
   const count = ref(0)
   const loading = ref(false)
 
@@ -40,13 +38,13 @@ export function usePayments() {
   const fetchRestaurantPayments = async (params?: {
     page?: number
     page_size?: number
-    status?: PaymentStatus | ''
+    status?: Payment['status'] | ''
   }) => {
     loading.value = true
     try {
       const result = await paymentsApi.restaurantList(params)
-      payments.value = Array.isArray(result) ? result : result.results ?? []
-      count.value = Array.isArray(result) ? result.length : result.count ?? payments.value.length
+      payments.value = result.results ?? []
+      count.value = result.count ?? payments.value.length
       return result
     } finally {
       loading.value = false
