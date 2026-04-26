@@ -11,6 +11,7 @@ import type {
   PaymentLedger,
   PaymentSettleRequest,
   PaymentStatus,
+  PaymentRefundResponse,
   PublicDiningCheck,
   RefundCreateRequest,
 } from '~/types/api'
@@ -71,7 +72,7 @@ export const paymentsApi = {
   },
 
   refund(id: number, payload: RefundCreateRequest) {
-    return post<PaymentLedger>(`/restaurant/payments/${id}/refund/`, payload)
+    return post<Payment | PaymentRefundResponse>(`/restaurant/payments/${id}/refund/`, payload)
   },
 
   markReviewed(id: number, note?: string) {

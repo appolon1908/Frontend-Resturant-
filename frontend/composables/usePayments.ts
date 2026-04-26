@@ -6,12 +6,13 @@ import type {
   PaymentIntentResponse,
   PaymentSettleRequest,
   PaymentStatus,
+  PaymentRefundResponse,
   RefundCreateRequest,
 } from '~/types/api'
 
 export function usePayments() {
   const latestIntent = ref<PaymentIntentResponse | null>(null)
-  const latestPayment = ref<Payment | PaymentLedger | null>(null)
+  const latestPayment = ref<Payment | PaymentLedger | PaymentRefundResponse | null>(null)
   const payments = ref<Array<Payment | PaymentLedger>>([])
   const count = ref(0)
   const loading = ref(false)

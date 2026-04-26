@@ -66,6 +66,7 @@ export interface PaymentIntentResponse { payment_id: number; client_secret?: str
 export interface PaymentIntentCreateRequest { order_id?: number; check_id?: number; booking_id?: number; amount?: string; currency?: string; provider?: PaymentProvider; return_url?: string; cancel_url?: string }
 export interface PaymentSettleRequest { check_id?: number; order_id?: number; amount: string; currency?: string; provider?: PaymentProvider; idempotency_key: string; request_id: string }
 export interface RefundCreateRequest { amount: string; reason?: string; idempotency_key: string; request_id: string }
+export interface PaymentRefundResponse { payment_id?: number; refund_id?: string; status?: PaymentStatus; amount?: string; currency?: string; provider_refund_id?: string; [key: string]: unknown }
 
 // Public dining checks
 export interface PublicDiningCheck { id: number; restaurant_name: string; table_name: string; guest_name: string | null; status: CheckStatus; subtotal?: string; tax_amount?: string; service_charge_amount?: string; tip_amount?: string; total_amount?: string; paid_amount?: string; remaining_amount: string; qr_token: string; payment_url?: string; updated_at: string }
