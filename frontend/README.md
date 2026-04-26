@@ -72,6 +72,7 @@ cat package.json
 ## Product Flows
 
 * [Restaurant App User Journeys](./docs/restaurant-user-journeys.md)
+* [Launch QA Test Sheet](./docs/launch-qa-test-sheet.md)
 
 ## Realtime behavior
 
