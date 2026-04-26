@@ -10,11 +10,20 @@ import type {
   PaymentIntentResponse,
   PaymentLedger,
   PaymentSettleRequest,
+  PaymentStatus,
   PublicDiningCheck,
   RefundCreateRequest,
 } from '~/types/api'
 
-type QV = string | number | boolean | null | undefined
+type QueryValue = string | number | boolean | null | undefined
+
+export interface PaymentListParams extends Record<string, QueryValue> {
+  page?: number
+  page_size?: number
+  search?: string
+  ordering?: string
+  status?: PaymentStatus | ''
+}
 
 export const paymentsApi = {
   // ── Customer ────────────────────────────────────────────────
@@ -49,8 +58,8 @@ export const paymentsApi = {
   },
 
   // ── Restaurant payments ──────────────────────────────────────
-  restaurantList(params?: { page?: number; page_size?: number; search?: string; ordering?: string; status?: string }) {
-    return get<Paginated<PaymentLedger>>('/restaurant/payments/', params as Record<string, QV>)
+  restaurantList(params?: PaymentListParams) {
+    return get<Paginated<PaymentLedger>>('/restaurant/payments/', params)
   },
 
   restaurantDetail(id: number) {
@@ -98,9 +107,4 @@ export const paymentsApi = {
     return post<unknown>(`/restaurant/checks/${id}/payment-link/`, payload ?? {})
   },
 
-  // Backward-compatible aliases
-  createOrderPaymentIntent: (p: PaymentIntentCreateRequest) => paymentsApi.createIntent(p),
-  getPaymentStatus: (id: number) => paymentsApi.getStatus(id),
-  settlePayment: (p: PaymentSettleRequest) => paymentsApi.settle(p),
-  refundPayment: (id: number, p: RefundCreateRequest) => paymentsApi.refund(id, p),
 }

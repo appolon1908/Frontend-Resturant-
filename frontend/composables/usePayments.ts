@@ -5,6 +5,7 @@ import type {
   PaymentIntentCreateRequest,
   PaymentIntentResponse,
   PaymentSettleRequest,
+  PaymentStatus,
   RefundCreateRequest,
 } from '~/types/api'
 
@@ -38,7 +39,7 @@ export function usePayments() {
   const fetchRestaurantPayments = async (params?: {
     page?: number
     page_size?: number
-    status?: string
+    status?: PaymentStatus | ''
   }) => {
     loading.value = true
     try {
