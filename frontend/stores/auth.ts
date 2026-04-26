@@ -16,6 +16,13 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => Boolean(state.token),
   },
   actions: {
+    syncRestaurantContext() {
+      const restaurantStore = useRestaurantStore()
+      restaurantStore.setActiveRestaurantId(
+        this.user?.role === 'restaurant' && this.user?.id ? this.user.id : null,
+      )
+    },
+
     hydrate() {
       if (this.initialized || !import.meta.client) return
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -25,6 +32,7 @@ export const useAuthStore = defineStore('auth', {
           this.token = parsed.token || ''
           this.user = parsed.user || null
           setAccessToken(this.token || null)
+          this.syncRestaurantContext()
         } catch {
           localStorage.removeItem(STORAGE_KEY)
         }
@@ -46,9 +54,10 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const data = await authApi.login({ email, password })
-        this.token = data.token
+        this.token = data.token || data.access || ''
         this.user = data.user || null
         this.persist()
+        this.syncRestaurantContext()
       } finally {
         this.loading = false
       }
@@ -57,10 +66,11 @@ export const useAuthStore = defineStore('auth', {
     async register(full_name: string, email: string, password: string) {
       this.loading = true
       try {
-        const data = await authApi.register({ full_name, email, password })
-        this.token = data.token
+        const data = await authApi.register({ full_name, email, password, role: 'customer' })
+        this.token = data.token || data.access || ''
         this.user = data.user || null
         this.persist()
+        this.syncRestaurantContext()
       } finally {
         this.loading = false
       }
@@ -73,6 +83,7 @@ export const useAuthStore = defineStore('auth', {
         this.$reset()
         this.initialized = true
         this.persist()
+        this.syncRestaurantContext()
       }
     },
 
@@ -89,6 +100,7 @@ export const useAuthStore = defineStore('auth', {
         this.$reset()
         this.initialized = true
         this.persist()
+        this.syncRestaurantContext()
         if (import.meta.client) navigateTo('/auth/login')
         return 'Your session expired. Please log in again.'
       }
