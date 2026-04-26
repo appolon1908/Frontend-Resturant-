@@ -4,13 +4,13 @@ definePageMeta({ layout: 'restaurant' })
 import type { PaymentStatus } from '~/types/api'
 import type { PaymentListParams } from '~/api/payments'
 
-const { handleApiError } = useAuth()
 const { realtime, connect, disconnect } = useRealtime()
 const restaurant = useRestaurantStore()
 const {
   payments, count, loading, error,
-  latestStatusPayment, latestLedgerEntry,
-  fetchPaymentStatus, fetchRestaurantPayments,
+  latestStatusPayment,
+  fetchPaymentStatus,
+  fetchRestaurantPayments,
 } = usePayments()
 
 const statusFilter = ref<PaymentStatus | ''>('')
@@ -50,7 +50,7 @@ async function lookupStatus() {
   successBanner.value = ''
   try {
     await fetchPaymentStatus(statusPaymentId.value)
-  } catch (err) {
+  } catch {
     // error surfaced via composable
   }
 }
@@ -88,7 +88,10 @@ const STATUS_FILTERS: Array<{ label: string; value: PaymentStatus | '' }> = [
     </div>
 
     <p v-if="error" class="error-banner">{{ error }}</p>
-    <p v-if="successBanner" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+    <p
+      v-if="successBanner"
+      class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+    >
       {{ successBanner }}
     </p>
 
@@ -122,7 +125,10 @@ const STATUS_FILTERS: Array<{ label: string; value: PaymentStatus | '' }> = [
       <AppButton :disabled="!statusPaymentId || loading" @click="lookupStatus">
         Check status
       </AppButton>
-      <div v-if="latestStatusPayment" class="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+      <div
+        v-if="latestStatusPayment"
+        class="flex flex-wrap items-center gap-2 text-sm text-slate-700"
+      >
         <span class="font-medium">ID {{ latestStatusPayment.id }}</span>
         <PaymentStatusBadge :status="latestStatusPayment.status" />
         <span>{{ latestStatusPayment.amount }} {{ latestStatusPayment.currency ?? 'USD' }}</span>
@@ -166,19 +172,5 @@ const STATUS_FILTERS: Array<{ label: string; value: PaymentStatus | '' }> = [
     <AppEmptyState v-else>
       {{ statusFilter ? `No ${statusFilter} payments found.` : 'No payments yet.' }}
     </AppEmptyState>
-
-    <AppCard v-if="latestLedgerEntry" class="space-y-1 border-l-4 border-emerald-400">
-      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Last operation result</p>
-      <div class="flex flex-wrap items-center gap-2 text-sm text-slate-700">
-        <span class="font-medium">ID #{{ latestLedgerEntry.id }}</span>
-        <PaymentStatusBadge :status="latestLedgerEntry.status" />
-        <span>{{ latestLedgerEntry.amount }} {{ latestLedgerEntry.currency ?? 'USD' }}</span>
-      </div>
-      <p class="text-xs text-slate-400">
-        {{ latestLedgerEntry.paid_at
-          ? `Paid ${new Date(latestLedgerEntry.paid_at).toLocaleString()}`
-          : `Created ${new Date(latestLedgerEntry.created_at).toLocaleString()}` }}
-      </p>
-    </AppCard>
   </section>
 </template>
