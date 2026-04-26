@@ -1,6 +1,7 @@
 import { paymentsApi } from '~/api/payments'
 import type {
   Payment,
+  PaymentLedger,
   PaymentIntentCreateRequest,
   PaymentIntentResponse,
   PaymentSettleRequest,
@@ -9,8 +10,8 @@ import type {
 
 export function usePayments() {
   const latestIntent = ref<PaymentIntentResponse | null>(null)
-  const latestPayment = ref<Payment | null>(null)
-  const payments = ref<Payment[]>([])
+  const latestPayment = ref<Payment | PaymentLedger | null>(null)
+  const payments = ref<Array<Payment | PaymentLedger>>([])
   const count = ref(0)
   const loading = ref(false)
 
@@ -24,16 +25,26 @@ export function usePayments() {
     return latestPayment.value
   }
 
-  const settlePayment = async (payload: PaymentSettleRequest) => paymentsApi.settle(payload)
+  const settlePayment = async (payload: PaymentSettleRequest) => {
+    latestPayment.value = await paymentsApi.settle(payload)
+    return latestPayment.value
+  }
 
-  const refundPayment = async (paymentId: number, payload: RefundCreateRequest) => paymentsApi.refund(paymentId, payload)
+  const refundPayment = async (paymentId: number, payload: RefundCreateRequest) => {
+    latestPayment.value = await paymentsApi.refund(paymentId, payload)
+    return latestPayment.value
+  }
 
-  const fetchRestaurantPayments = async (params?: { page?: number; page_size?: number; status?: string }) => {
+  const fetchRestaurantPayments = async (params?: {
+    page?: number
+    page_size?: number
+    status?: string
+  }) => {
     loading.value = true
     try {
-      const result = await (paymentsApi as any).restaurantList(params)
-      payments.value = Array.isArray(result) ? result : result.results || []
-      count.value = Array.isArray(result) ? result.length : result.count || payments.value.length
+      const result = await paymentsApi.restaurantList(params)
+      payments.value = Array.isArray(result) ? result : result.results ?? []
+      count.value = Array.isArray(result) ? result.length : result.count ?? payments.value.length
       return result
     } finally {
       loading.value = false
@@ -51,7 +62,5 @@ export function usePayments() {
     settlePayment,
     refundPayment,
     fetchRestaurantPayments,
-    createOrderPaymentIntent: createIntent,
-    getPaymentStatus: fetchPaymentStatus,
   }
 }
