@@ -6,7 +6,7 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "typecheck": "nuxt typecheck",
+    "typecheck": "nuxt prepare && tsc --noEmit -p tsconfig.json",
     "lint": "eslint ."
   },
   "dependencies": {

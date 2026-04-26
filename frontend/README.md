@@ -72,3 +72,7 @@ Security rules:
 - authenticated only
 - never broadcast cross-restaurant events
 - never emit raw provider payment payloads
+
+## Codex prompt ID naming
+
+When referencing prompt IDs in Codex, use `jlwm115` and `jlwm116` (not `ժմ115` / `ժմ116`) to avoid character-confusion issues.

@@ -1,5 +1,24 @@
 import { get, post } from '~/api/client'
-import type { Payment, PaymentIntentCreateRequest, PaymentIntentResponse, PaymentSettleRequest, RefundCreateRequest } from '~/types/api'
+import type {
+  Payment,
+  PaymentLedger,
+  Paginated,
+  PaymentIntentCreateRequest,
+  PaymentIntentResponse,
+  PaymentSettleRequest,
+  RefundCreateRequest,
+  PaymentStatus,
+} from '~/types/api'
+
+export interface PaymentListParams {
+  page?: number
+  page_size?: number
+  search?: string
+  ordering?: string
+  status?: PaymentStatus | ''
+}
+
+export type PaymentListResponse = Paginated<PaymentLedger>
 
 export const paymentsApi = {
   createIntent(payload: PaymentIntentCreateRequest) {
@@ -11,27 +30,18 @@ export const paymentsApi = {
   },
 
   settle(payload: PaymentSettleRequest) {
-    return post<Payment>('/restaurant/payments/settle/', payload)
+    return post<PaymentLedger>('/restaurant/payments/settle/', payload)
   },
 
   refund(id: number, payload: RefundCreateRequest) {
-    return post<Payment>(`/restaurant/payments/${id}/refund/`, payload)
+    return post<PaymentLedger>(`/restaurant/payments/${id}/refund/`, payload)
   },
 
-  // Backward-compatible aliases.
-  createOrderPaymentIntent(payload: PaymentIntentCreateRequest) {
-    return post<PaymentIntentResponse>('/customer/payments/intent/', payload)
+  restaurantList(params?: PaymentListParams) {
+    return get<PaymentListResponse>('/restaurant/payments/', params)
   },
 
-  getPaymentStatus(id: number) {
-    return get<Payment>(`/public/payments/${id}/status/`)
-  },
-
-  settlePayment(payload: PaymentSettleRequest) {
-    return post<Payment>('/restaurant/payments/settle/', payload)
-  },
-
-  refundPayment(id: number, payload: RefundCreateRequest) {
-    return post<Payment>(`/restaurant/payments/${id}/refund/`, payload)
+  restaurantDetail(id: number) {
+    return get<PaymentLedger>(`/restaurant/payments/${id}/`)
   },
 }
