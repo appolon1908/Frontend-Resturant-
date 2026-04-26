@@ -7,6 +7,9 @@ const loading = ref(true)
 const error = ref('')
 
 async function fetchDashboard() {
+  loading.value = true
+  error.value = ''
+
   try {
     await restaurant.fetchDashboard()
   } catch (err) {
