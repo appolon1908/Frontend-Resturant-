@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const data = await authApi.login({ email, password })
-        this.token = data.token
+        this.token = data.token || data.access || ''
         this.user = data.user || null
         this.persist()
       } finally {
@@ -57,8 +57,8 @@ export const useAuthStore = defineStore('auth', {
     async register(full_name: string, email: string, password: string) {
       this.loading = true
       try {
-        const data = await authApi.register({ full_name, email, password })
-        this.token = data.token
+        const data = await authApi.register({ full_name, email, password, role: 'customer' })
+        this.token = data.token || data.access || ''
         this.user = data.user || null
         this.persist()
       } finally {
