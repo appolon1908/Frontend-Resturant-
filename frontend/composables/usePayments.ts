@@ -12,7 +12,6 @@ import type { PaymentListParams } from '~/api/payments'
 export function usePayments() {
   const latestIntent = ref<PaymentIntentResponse | null>(null)
   const latestStatusPayment = ref<Payment | null>(null)
-  const latestLedgerEntry = ref<PaymentLedger | null>(null)
   const payments = ref<PaymentLedger[]>([])
   const count = ref(0)
   const loading = ref(false)
@@ -32,19 +31,18 @@ export function usePayments() {
 
   const settlePayment = async (payload: PaymentSettleRequest) => {
     error.value = null
-    latestLedgerEntry.value = await paymentsApi.settle(payload)
-    return latestLedgerEntry.value
+    return paymentsApi.settle(payload)
   }
 
   const refundPayment = async (paymentId: number, payload: RefundCreateRequest) => {
     error.value = null
-    latestLedgerEntry.value = await paymentsApi.refund(paymentId, payload)
-    return latestLedgerEntry.value
+    return paymentsApi.refund(paymentId, payload)
   }
 
   const fetchRestaurantPayments = async (params?: PaymentListParams) => {
     loading.value = true
     error.value = null
+
     try {
       const result = await paymentsApi.restaurantList(params)
       payments.value = result.results
@@ -61,7 +59,6 @@ export function usePayments() {
   return {
     latestIntent,
     latestStatusPayment,
-    latestLedgerEntry,
     payments,
     count,
     loading,
