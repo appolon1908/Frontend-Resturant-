@@ -12,9 +12,67 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "repository-name-migration.v1.json"
 README = ROOT / "README.md"
 RUNBOOK = ROOT / "REPOSITORY_NAME_MIGRATION.md"
+VALIDATOR = Path(__file__).resolve()
 FRONTEND = ROOT / "frontend"
 CURRENT = "appolon1908-hue/Frontend-Resturant-"
 TARGET = "appolon1908-hue/restaurant-frontend"
+
+TEXT_SUFFIXES = {
+    ".bash",
+    ".cfg",
+    ".conf",
+    ".env",
+    ".hcl",
+    ".ini",
+    ".js",
+    ".json",
+    ".mjs",
+    ".cjs",
+    ".properties",
+    ".ps1",
+    ".py",
+    ".sh",
+    ".tf",
+    ".tfvars",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".vue",
+    ".xml",
+    ".yaml",
+    ".yml",
+    ".zsh",
+}
+OPERATIONAL_ROOTS = {
+    ".github",
+    "deploy",
+    "deployment",
+    "frontend",
+    "infra",
+    "infrastructure",
+    "scripts",
+}
+EXCLUDED_PARTS = {
+    ".git",
+    ".nuxt",
+    ".output",
+    "coverage",
+    "dist",
+    "node_modules",
+}
+ROOT_OPERATIONAL_NAMES = {
+    ".gitmodules",
+    "Caddyfile",
+    "Dockerfile",
+    "Makefile",
+    "compose.yaml",
+    "compose.yml",
+    "docker-compose.yaml",
+    "docker-compose.yml",
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+}
 
 
 def fail(message: str) -> None:
@@ -30,6 +88,45 @@ def load() -> dict[str, Any]:
     if not isinstance(value, dict):
         fail("repository migration root must be an object")
     return value
+
+
+def is_operational_source(path: Path) -> bool:
+    try:
+        relative = path.resolve().relative_to(ROOT.resolve())
+    except ValueError:
+        return False
+
+    if path.resolve() in {
+        MANIFEST.resolve(),
+        README.resolve(),
+        RUNBOOK.resolve(),
+        VALIDATOR,
+    }:
+        return False
+    if any(part in EXCLUDED_PARTS for part in relative.parts):
+        return False
+    if relative.name in ROOT_OPERATIONAL_NAMES:
+        return True
+    if relative.parts and relative.parts[0] in OPERATIONAL_ROOTS:
+        return relative.suffix.lower() in TEXT_SUFFIXES or relative.name in {
+            "Caddyfile",
+            "Dockerfile",
+            "Makefile",
+        }
+    return False
+
+
+def validate_target_absent_from_operational_sources() -> None:
+    target = TARGET.lower()
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or not is_operational_source(path):
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore").lower()
+        if target in text:
+            fail(
+                "target repository is used by active automation or deployment "
+                f"source before cutover: {path.relative_to(ROOT)}"
+            )
 
 
 def validate() -> None:
@@ -84,11 +181,17 @@ def validate() -> None:
     runbook = RUNBOOK.read_text(encoding="utf-8")
     for required in (
         "POST_RENAME_INTEGRATION_READBACK=PASS",
+        "ACTIONS_REQUIRED_CHECKS=PASS",
+        "PACKAGES_GHCR=PASS|N/A",
+        "DEPLOY_KEYS_APPS_WEBHOOKS=PASS|N/A",
+        "DOWNSTREAM_CONSUMERS=PASS",
         "CURRENT_RUNTIME_STATE=DEPLOYED|NOT_DEPLOYED",
         "DEPLOYED_IMAGE_DIGEST=<immutable-digest>|N/A",
         "RUNTIME_DIGEST_UNCHANGED=PASS|N/A",
         "MERGES_UNFROZEN=PASS",
+        "RELEASE_DISPATCH_UNFROZEN=PASS|N/A",
         "WORKFLOW_DISPATCH_UNFROZEN=PASS|N/A",
+        "DEPLOYMENT_DISPATCH_RESTORED=PASS|N/A",
         "ROLLBACK_UNFREEZE=PASS|N/A",
         "Do not leave the repository frozen.",
         "WORKLOADS_RESTARTED=0",
@@ -101,22 +204,7 @@ def validate() -> None:
 
     if not FRONTEND.is_dir():
         fail("restaurant frontend source directory is missing")
-    for path in FRONTEND.rglob("*"):
-        if not path.is_file() or path.suffix.lower() in {
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".gif",
-            ".woff",
-            ".woff2",
-        }:
-            continue
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        if TARGET in text:
-            fail(
-                "target repository is used by active frontend source before cutover: "
-                f"{path.relative_to(ROOT)}"
-            )
+    validate_target_absent_from_operational_sources()
 
 
 def main() -> None:
