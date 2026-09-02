@@ -41,6 +41,8 @@ def validate() -> None:
         "target_repository_after_cutover": TARGET,
         "status": "PREPARED_NOT_RENAMED",
         "runtime_critical": True,
+        "current_runtime_state": "REQUIRES_PRE_CUTOVER_DISCOVERY",
+        "runtime_digest_evidence": "REQUIRED_WHEN_DEPLOYED_OTHERWISE_NOT_APPLICABLE",
         "authority_role": "Restaurant customer and operations frontend",
         "account_authority": (
             "appolon1908-hue/documentaions:repository-name-migration.v1.json"
@@ -58,7 +60,11 @@ def validate() -> None:
         "target_repository_forbidden_in_automation_before_cutover",
         "same_repository_id_required_after_cutover",
         "historical_evidence_immutable",
-        "runtime_digest_must_remain_unchanged",
+        "all_inventoried_integrations_require_post_rename_readback",
+        "runtime_digest_must_remain_unchanged_when_deployed",
+        "absent_runtime_digest_must_be_recorded_as_not_applicable",
+        "success_path_must_restore_freeze_state",
+        "rollback_path_must_restore_freeze_state",
     ):
         if policy.get(key) is not True:
             fail(f"required fail-closed migration policy is not true: {key}")
@@ -77,13 +83,21 @@ def validate() -> None:
 
     runbook = RUNBOOK.read_text(encoding="utf-8")
     for required in (
+        "POST_RENAME_INTEGRATION_READBACK=PASS",
+        "CURRENT_RUNTIME_STATE=DEPLOYED|NOT_DEPLOYED",
+        "DEPLOYED_IMAGE_DIGEST=<immutable-digest>|N/A",
+        "RUNTIME_DIGEST_UNCHANGED=PASS|N/A",
+        "MERGES_UNFROZEN=PASS",
+        "WORKFLOW_DISPATCH_UNFROZEN=PASS|N/A",
+        "ROLLBACK_UNFREEZE=PASS|N/A",
+        "Do not leave the repository frozen.",
         "WORKLOADS_RESTARTED=0",
         "IMAGES_REBUILT=0",
         "DATABASE_MIGRATIONS=0",
         "PRODUCTION_TRAFFIC_CHANGED=NO",
     ):
         if required not in runbook:
-            fail(f"rename runbook is missing zero-change evidence: {required}")
+            fail(f"rename runbook is missing required evidence: {required}")
 
     if not FRONTEND.is_dir():
         fail("restaurant frontend source directory is missing")
