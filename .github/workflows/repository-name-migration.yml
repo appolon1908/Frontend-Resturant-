@@ -2,23 +2,9 @@ name: Repository Name Migration Authority
 
 on:
   pull_request:
-    paths:
-      - 'repository-name-migration.v1.json'
-      - 'REPOSITORY_NAME_MIGRATION.md'
-      - 'README.md'
-      - 'frontend/**'
-      - 'scripts/validate_repository_name_migration.py'
-      - '.github/workflows/repository-name-migration.yml'
   push:
     branches:
       - main
-    paths:
-      - 'repository-name-migration.v1.json'
-      - 'REPOSITORY_NAME_MIGRATION.md'
-      - 'README.md'
-      - 'frontend/**'
-      - 'scripts/validate_repository_name_migration.py'
-      - '.github/workflows/repository-name-migration.yml'
 
 permissions:
   contents: read
