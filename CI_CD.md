@@ -64,7 +64,7 @@ Continuous delivery is therefore complete at the artifact boundary. Runtime depl
 
 ## Repository-specific status
 
-The current application has no committed dependency lockfile. CI can validate it, but GHCR image publication remains blocked until a lockfile and reviewed Dockerfile are present.
+The application has a committed npm lockfile. CI and Vercel can now install the same dependency graph with `npm ci`. GHCR image publication remains blocked until a reviewed Dockerfile is present.
 
 ## Required GitHub settings
 
