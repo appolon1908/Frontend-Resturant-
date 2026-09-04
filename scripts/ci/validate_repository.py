@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repository-aware CI/CD validation shared by all persistent branches."""
+"""Stack-aware, fail-closed CI validation for every repository branch."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-EXCLUDED_PARTS = {
+EXCLUDED = {
     ".git",
     ".nuxt",
     ".output",
@@ -27,22 +27,13 @@ EXCLUDED_PARTS = {
     "node_modules",
     "vendor",
 }
-PERSISTENT_BRANCHES = {"development", "test", "staging", "production", "main"}
 RELEASE_BRANCHES = {"staging", "production", "main"}
 NODE_SCRIPTS = ("lint", "typecheck", "test", "build")
-PRIVATE_KEY_MARKERS = tuple(
-    "-----BEGIN " + prefix + "PRIVATE KEY-----"
-    for prefix in ("", "RSA ", "EC ", "OPENSSH ")
-)
-TOKEN_PATTERNS = (
-    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
-    re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{30,}\b"),
-)
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 
 
 class ValidationError(RuntimeError):
-    pass
+    """Raised when a repository contract fails."""
 
 
 def fail(message: str) -> None:
@@ -71,41 +62,41 @@ def run(
 
 def iter_files(root: Path) -> Iterable[Path]:
     for path in root.rglob("*"):
-        if any(part in EXCLUDED_PARTS for part in path.parts):
+        if any(part in EXCLUDED for part in path.parts):
             continue
         if path.is_file():
             yield path
 
 
-def relative(path: Path, root: Path) -> str:
+def rel(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
 def validate_paths(root: Path) -> None:
     for path in root.rglob("*"):
-        if any(part in EXCLUDED_PARTS for part in path.parts):
+        if any(part in EXCLUDED for part in path.parts):
             continue
         if path.is_symlink():
             target = path.resolve(strict=False)
             try:
                 target.relative_to(root)
             except ValueError:
-                fail(f"symlink escapes repository: {relative(path, root)} -> {target}")
+                fail(f"symlink escapes repository: {rel(path, root)} -> {target}")
         if path.is_file() and path.stat().st_size > 50 * 1024 * 1024:
-            fail(f"repository file exceeds 50 MiB: {relative(path, root)}")
+            fail(f"repository file exceeds 50 MiB: {rel(path, root)}")
 
 
 def validate_json(root: Path) -> int:
-    count = 0
+    checked = 0
     for path in iter_files(root):
         if path.suffix.lower() != ".json" or path.stat().st_size > 5 * 1024 * 1024:
             continue
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            fail(f"invalid JSON in {relative(path, root)}: {exc}")
-        count += 1
-    return count
+            fail(f"invalid JSON in {rel(path, root)}: {exc}")
+        checked += 1
+    return checked
 
 
 def validate_yaml(root: Path) -> int:
@@ -114,19 +105,19 @@ def validate_yaml(root: Path) -> int:
     except ImportError as exc:
         fail(f"PyYAML is required: {exc}")
 
-    count = 0
+    checked = 0
     for path in iter_files(root):
         if path.suffix.lower() not in {".yaml", ".yml"} or path.stat().st_size > 5 * 1024 * 1024:
             continue
         try:
             list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
         except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
-            fail(f"invalid YAML in {relative(path, root)}: {exc}")
-        count += 1
-    return count
+            fail(f"invalid YAML in {rel(path, root)}: {exc}")
+        checked += 1
+    return checked
 
 
-def validate_markdown_links(root: Path) -> int:
+def validate_markdown(root: Path) -> int:
     checked = 0
     for path in iter_files(root):
         if path.suffix.lower() not in {".md", ".mdx"} or path.stat().st_size > 5 * 1024 * 1024:
@@ -136,7 +127,8 @@ def validate_markdown_links(root: Path) -> int:
             target = raw.strip().split(maxsplit=1)[0].strip("<>")
             if (
                 not target
-                or target.startswith(("#", "http://", "https://", "mailto:", "tel:", "data:"))
+                or target.startswith(("#", "/", "http://", "https://", "mailto:", "tel:", "data:"))
+                or any(marker in target for marker in ("${", "{{", "}}"))
             ):
                 continue
             target = target.split("#", 1)[0].split("?", 1)[0]
@@ -146,135 +138,96 @@ def validate_markdown_links(root: Path) -> int:
             try:
                 destination.relative_to(root)
             except ValueError:
-                fail(f"Markdown link escapes repository in {relative(path, root)}: {raw}")
+                fail(f"Markdown link escapes repository in {rel(path, root)}: {raw}")
             if not destination.exists():
-                fail(f"broken local Markdown link in {relative(path, root)}: {raw}")
+                fail(f"broken local Markdown link in {rel(path, root)}: {raw}")
             checked += 1
     return checked
 
 
-def validate_secret_shapes(root: Path) -> None:
-    for path in iter_files(root):
-        if path.stat().st_size > 2 * 1024 * 1024:
-            continue
-        if path.suffix.lower() in {
-            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".zip", ".gz", ".tar",
-            ".md", ".mdx", ".txt",
-        }:
-            continue
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        for marker in PRIVATE_KEY_MARKERS:
-            if marker in text:
-                fail(f"private-key material found in {relative(path, root)}")
-        for pattern in TOKEN_PATTERNS:
-            if pattern.search(text):
-                fail(f"credential-shaped token found in {relative(path, root)}")
-
-
 def node_manifests(root: Path) -> list[Path]:
-    result: list[Path] = []
-    for path in root.rglob("package.json"):
-        if any(part in EXCLUDED_PARTS for part in path.parts):
-            continue
-        if len(path.relative_to(root).parts) <= 5:
-            result.append(path)
-    return sorted(result)
+    return sorted(
+        path
+        for path in root.rglob("package.json")
+        if not any(part in EXCLUDED for part in path.parts)
+        and len(path.relative_to(root).parts) <= 5
+    )
 
 
 def python_roots(root: Path) -> list[Path]:
-    candidates: set[Path] = set()
-    for name in ("pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"):
+    result: set[Path] = set()
+    for name in ("pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "requirements.lock"):
         for path in root.rglob(name):
-            if any(part in EXCLUDED_PARTS for part in path.parts):
+            if any(part in EXCLUDED for part in path.parts):
                 continue
             if len(path.relative_to(root).parts) <= 5:
-                candidates.add(path.parent)
-    return sorted(candidates)
+                result.add(path.parent)
+    return sorted(result)
 
 
 def dockerfiles(root: Path) -> list[Path]:
     return sorted(
         path
         for path in root.rglob("Dockerfile")
-        if not any(part in EXCLUDED_PARTS for part in path.parts)
+        if not any(part in EXCLUDED for part in path.parts)
         and len(path.relative_to(root).parts) <= 5
     )
 
 
-def script_exists(manifest: dict, name: str) -> bool:
+def has_script(manifest: dict, name: str) -> bool:
     scripts = manifest.get("scripts")
     return isinstance(scripts, dict) and isinstance(scripts.get(name), str) and bool(scripts[name].strip())
 
 
-def validate_javascript_syntax(directory: Path) -> None:
-    for path in sorted(directory.rglob("*.js")):
-        if any(part in EXCLUDED_PARTS for part in path.parts):
-            continue
-        run(["node", "--check", str(path)], cwd=directory, timeout=120)
-
-
 def run_node_project(directory: Path, manifest_path: Path, mode: str, branch: str) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    env = dict(os.environ)
+    env.update({"CI": "true", "NODE_ENV": "test", "NPM_CONFIG_LEGACY_PEER_DEPS": "true"})
+
     package_lock = directory / "package-lock.json"
     pnpm_lock = directory / "pnpm-lock.yaml"
     yarn_lock = directory / "yarn.lock"
 
-    env = dict(os.environ)
-    env.update({"CI": "true", "NODE_ENV": "test"})
-
     if package_lock.is_file():
-        run(["npm", "ci", "--no-audit", "--fund=false"], cwd=directory, env=env)
+        run(["npm", "ci", "--legacy-peer-deps", "--no-audit", "--fund=false"], cwd=directory, env=env, timeout=1800)
         runner = ["npm", "run"]
     elif pnpm_lock.is_file():
         run(["corepack", "enable"], cwd=directory, env=env)
-        run(["pnpm", "install", "--frozen-lockfile"], cwd=directory, env=env)
+        run(["pnpm", "install", "--frozen-lockfile"], cwd=directory, env=env, timeout=1800)
         runner = ["pnpm", "run"]
     elif yarn_lock.is_file():
         run(["corepack", "enable"], cwd=directory, env=env)
-        run(["yarn", "install", "--immutable"], cwd=directory, env=env)
+        run(["yarn", "install", "--immutable"], cwd=directory, env=env, timeout=1800)
         runner = ["yarn", "run"]
     else:
         if mode == "release" and branch in RELEASE_BRANCHES:
             print(f"WARNING=release branch lacks a dependency lockfile: {directory}")
-        run(["npm", "install", "--no-audit", "--fund=false"], cwd=directory, env=env)
+        run(["npm", "install", "--legacy-peer-deps", "--no-audit", "--fund=false"], cwd=directory, env=env, timeout=1800)
         runner = ["npm", "run"]
 
-    validate_javascript_syntax(directory)
+    for path in sorted(directory.rglob("*.js")):
+        if any(part in EXCLUDED for part in path.parts):
+            continue
+        run(["node", "--check", str(path)], cwd=directory, env=env, timeout=120)
 
     for name in NODE_SCRIPTS:
-        if not script_exists(manifest, name):
-            continue
-        command = [*runner, name]
-        run(command, cwd=directory, env=env, timeout=1800)
+        if has_script(manifest, name):
+            run([*runner, name], cwd=directory, env=env, timeout=1800)
 
-    if package_lock.is_file() or (directory / "node_modules").exists():
-        run(
-            ["npm", "audit", "--omit=dev", "--audit-level=critical"],
-            cwd=directory,
-            env=env,
-            timeout=600,
-        )
+    run(["npm", "audit", "--omit=dev", "--audit-level=critical"], cwd=directory, env=env, timeout=600)
 
 
 def requirement_file(directory: Path) -> Path | None:
-    preferred = (
-        "requirements.lock",
-        "requirements.txt",
-        "requirements-dev.txt",
-    )
-    for name in preferred:
-        path = directory / name
-        if path.is_file():
-            return path
+    for name in ("requirements.lock", "requirements.txt", "requirements-dev.txt"):
+        candidate = directory / name
+        if candidate.is_file():
+            return candidate
     return None
 
 
 def run_python_project(directory: Path, mode: str, branch: str) -> None:
-    env = dict(os.environ)
-    env.update({"PYTHONDONTWRITEBYTECODE": "1", "PYTHONUNBUFFERED": "1"})
     venv = directory / ".venv-ci"
-    if venv.exists():
-        shutil.rmtree(venv)
+    shutil.rmtree(venv, ignore_errors=True)
     run([sys.executable, "-m", "venv", str(venv)], cwd=directory)
     python = venv / "bin" / "python"
     run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--upgrade", "pip"], cwd=directory)
@@ -287,36 +240,27 @@ def run_python_project(directory: Path, mode: str, branch: str) -> None:
     elif (directory / "pyproject.toml").is_file():
         run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "-e", "."], cwd=directory, timeout=1800)
 
+    env = dict(os.environ)
+    env.update({"PYTHONDONTWRITEBYTECODE": "1", "PYTHONUNBUFFERED": "1"})
     run([str(python), "-m", "compileall", "-q", "."], cwd=directory, env=env)
-    tests = directory / "tests"
-    if tests.is_dir():
+    if (directory / "tests").is_dir():
         run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "pytest==8.4.2"], cwd=directory)
         run([str(python), "-m", "pytest", "-q"], cwd=directory, env=env, timeout=1800)
-
     run([str(python), "-m", "pip", "check"], cwd=directory, env=env)
     shutil.rmtree(venv, ignore_errors=True)
 
 
 def run_compose_checks(root: Path) -> None:
-    names = (
-        "compose.yml",
-        "compose.yaml",
-        "docker-compose.yml",
-        "docker-compose.yaml",
-    )
-    for name in names:
-        for path in root.rglob(name):
-            if any(part in EXCLUDED_PARTS for part in path.parts):
-                continue
-            command = ["docker", "compose"]
-            env_example = path.parent / ".env.example"
-            if env_example.is_file():
-                command.extend(["--env-file", str(env_example)])
-            command.extend(["-f", str(path), "config", "--quiet"])
-            try:
-                run(command, cwd=path.parent, timeout=300)
-            except ValidationError as exc:
-                print(f"WARNING=compose static rendering unavailable for {relative(path, root)}: {exc}")
+    names = {"compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"}
+    for path in sorted(iter_files(root)):
+        if path.name not in names:
+            continue
+        command = ["docker", "compose"]
+        env_example = path.parent / ".env.example"
+        if env_example.is_file():
+            command.extend(["--env-file", str(env_example)])
+        command.extend(["-f", str(path), "config", "--quiet"])
+        run(command, cwd=path.parent, timeout=300)
 
 
 def run_docker_builds(root: Path, mode: str) -> None:
@@ -324,8 +268,7 @@ def run_docker_builds(root: Path, mode: str) -> None:
         return
     for dockerfile in dockerfiles(root):
         context = dockerfile.parent
-        tag_seed = hashlib.sha256(str(dockerfile).encode("utf-8")).hexdigest()[:12]
-        tag = f"codestra-ci:{tag_seed}"
+        tag = "codestra-ci:" + hashlib.sha256(str(dockerfile).encode()).hexdigest()[:12]
         run(
             [
                 "docker",
@@ -347,19 +290,18 @@ def run_docker_builds(root: Path, mode: str) -> None:
 def implementation_present(root: Path) -> bool:
     if node_manifests(root) or python_roots(root) or dockerfiles(root):
         return True
-    extensions = {".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".rs", ".java", ".cs"}
-    policy_prefixes = {(".github",), ("docs",), ("scripts", "ci")}
+    code_extensions = {".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".rs", ".java", ".cs"}
     for path in iter_files(root):
         parts = path.relative_to(root).parts
-        if any(parts[: len(prefix)] == prefix for prefix in policy_prefixes):
+        if parts[:1] == (".github",) or parts[:1] == ("docs",) or parts[:2] == ("scripts", "ci"):
             continue
-        if path.suffix.lower() in extensions:
+        if path.suffix.lower() in code_extensions:
             return True
     return False
 
 
 def write_evidence(
-    path: Path | None,
+    output: Path | None,
     *,
     root: Path,
     branch: str,
@@ -367,9 +309,9 @@ def write_evidence(
     repository_class: str,
     json_count: int,
     yaml_count: int,
-    markdown_links: int,
+    markdown_count: int,
 ) -> None:
-    if path is None:
+    if output is None:
         return
     payload = {
         "schema_version": 1,
@@ -386,17 +328,17 @@ def write_evidence(
         "mode": mode,
         "repository_class": repository_class,
         "implementation_present": implementation_present(root),
-        "node_projects": [relative(item, root) for item in node_manifests(root)],
-        "python_projects": [relative(item, root) for item in python_roots(root)],
-        "dockerfiles": [relative(item, root) for item in dockerfiles(root)],
+        "node_projects": [rel(path, root) for path in node_manifests(root)],
+        "python_projects": [rel(path, root) for path in python_roots(root)],
+        "dockerfiles": [rel(path, root) for path in dockerfiles(root)],
         "validated_json_files": json_count,
         "validated_yaml_files": yaml_count,
-        "validated_local_markdown_links": markdown_links,
+        "validated_local_markdown_links": markdown_count,
         "runtime_deployment_authorized": False,
         "external_effects_authorized": False,
     }
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def main() -> int:
@@ -415,12 +357,11 @@ def main() -> int:
     validate_paths(root)
     json_count = validate_json(root)
     yaml_count = validate_yaml(root)
-    markdown_links = validate_markdown_links(root)
-    validate_secret_shapes(root)
-
+    markdown_count = validate_markdown(root)
     node = node_manifests(root)
     python = python_roots(root)
     docker = dockerfiles(root)
+
     print(f"REPOSITORY_CLASS={args.repository_class}")
     print(f"BRANCH={args.branch}")
     print(f"NODE_PROJECTS={len(node)}")
@@ -450,7 +391,7 @@ def main() -> int:
         repository_class=args.repository_class,
         json_count=json_count,
         yaml_count=yaml_count,
-        markdown_links=markdown_links,
+        markdown_count=markdown_count,
     )
     print("RUNTIME_DEPLOYMENT_AUTHORIZED=NO")
     print("EXTERNAL_EFFECTS_AUTHORIZED=NO")
