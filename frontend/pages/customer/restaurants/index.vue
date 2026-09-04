@@ -1,2 +1,7 @@
-<script setup lang="ts">definePageMeta({ layout: 'customer' })</script>
-<template><NuxtPage /></template>
+<script setup lang="ts">
+definePageMeta({ layout: 'customer' })
+</script>
+
+<template>
+  <NuxtPage />
+</template>
