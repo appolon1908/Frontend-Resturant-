@@ -139,7 +139,7 @@ def validate() -> None:
         "status": "PREPARED_NOT_RENAMED",
         "runtime_critical": True,
         "current_runtime_state": "REQUIRES_PRE_CUTOVER_DISCOVERY",
-        "runtime_digest_evidence": "REQUIRED_WHEN_DEPLOYED_OTHERWISE_NOT_APPLICABLE",
+        "runtime_digest_evidence": "CURRENT_AND_ROLLBACK_WHEN_DEPLOYED_OTHERWISE_NOT_APPLICABLE",
         "authority_role": "Restaurant customer and operations frontend",
         "account_authority": (
             "appolon1908-hue/documentaions:repository-name-migration.v1.json"
