@@ -1,7 +1,8 @@
+import type { Order } from '~/types/api'
 import { ordersApi } from '~/api/orders'
 
 export function useOrders() {
-  const orders = ref([])
+  const orders = ref<Order[]>([])
   const loading = ref(false)
 
   async function fetchOrders() {
