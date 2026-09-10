@@ -1,7 +1,8 @@
+import type { Reservation } from '~/types/api'
 import { reservationsApi } from '~/api/reservations'
 
 export function useReservations() {
-  const reservations = ref([])
+  const reservations = ref<Reservation[]>([])
   const loading = ref(false)
 
   async function fetchReservations() {
