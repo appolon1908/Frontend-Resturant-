@@ -74,3 +74,28 @@ test('dashboard actions call the API and preserve rejected mutations', async () 
   assert.equal(api.error.value, failure.message)
   assert.equal(api.loading.value, false)
 })
+
+test('menu updates preserve payloads and reject unsuccessful writes', async () => {
+  const payload = { name: 'Soup', category_id: 4 }
+  const failure = new Error('Category was removed')
+  const api = load('useMenu', {
+    '~/api/menu': { menuApi: { createItem: async (input) => {
+      assert.equal(input, payload)
+      throw failure
+    } } },
+  })
+  await assert.rejects(api.createItem(payload), (error) => error === failure)
+  assert.equal(api.error.value, failure.message)
+})
+
+test('billing checkout returns the service response rather than an empty success', async () => {
+  const payload = { plan_id: 2 }
+  const response = { url: 'https://checkout.example.test/session' }
+  const api = load('useBilling', {
+    '~/api/billing': { billingApi: { createCheckoutSession: async (input) => {
+      assert.equal(input, payload)
+      return response
+    } } },
+  })
+  assert.equal(await api.createCheckoutSession(payload), response)
+})

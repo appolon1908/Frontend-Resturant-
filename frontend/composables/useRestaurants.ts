@@ -1,19 +1,20 @@
 import { restaurantsApi } from '~/api/restaurants'
-import type { Restaurant } from '~/types/api'
+import type { MenuCategory, Restaurant } from '~/types/api'
 
 export function useRestaurants() {
   const customer = useCustomerStore()
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const menu = ref<unknown[]>([])
+  const menu = ref<MenuCategory[]>([])
+  const { handleApiError } = useAuth()
 
   async function fetchRestaurants() {
     loading.value = true
     error.value = null
     try {
       await customer.fetchRestaurants()
-    } catch (e: any) {
-      error.value = e?.detail ?? e?.message ?? 'Failed to load restaurants'
+    } catch (e) {
+      error.value = handleApiError(e, 'Failed to load restaurants')
     } finally {
       loading.value = false
     }
@@ -24,28 +25,20 @@ export function useRestaurants() {
     error.value = null
     try {
       await customer.fetchRestaurant(slug)
-    } catch (e: any) {
-      error.value = e?.detail ?? e?.message ?? 'Failed to load restaurant'
+    } catch (e) {
+      error.value = handleApiError(e, 'Failed to load restaurant')
     } finally {
       loading.value = false
     }
   }
 
   async function fetchMenu() {
-    const api = restaurantsApi as any
-    if (typeof api.publicMenu === 'function') {
-      menu.value = await api.publicMenu()
-    } else {
-      menu.value = []
-    }
+    menu.value = await restaurantsApi.publicMenu()
+    return menu.value
   }
 
-  async function checkAvailability(slug: string, date?: string) {
-    const api = restaurantsApi as any
-    if (typeof api.availability === 'function') {
-      return api.availability(slug, date)
-    }
-    return { available: true }
+  function checkAvailability(slug: string, date?: string) {
+    return restaurantsApi.availability(slug, date)
   }
 
   return {
