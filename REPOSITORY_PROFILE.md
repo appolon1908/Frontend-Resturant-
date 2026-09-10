@@ -4,10 +4,10 @@
 
 - **Repository:** `appolon1908-hue/Frontend-Resturant-`
 - **Category:** Product application — restaurant frontend
-- **Visibility:** `private`
+- **Visibility:** `public`
 - **Default branch:** `main`
 - **Authority:** Primary frontend authority for the restaurant application
-- **Status:** Source exists under `frontend/`; repository-level README is missing.
+- **Status:** Nuxt/TypeScript application under `frontend/` with repository-level README, CI and prepared repository-rename guidance.
 
 ## Purpose
 
@@ -33,9 +33,9 @@ Nuxt-based restaurant customer and operations frontend with reservations, orders
 
 ## Current priorities
 
-1. Add a repository-level README and architecture map
+1. Maintain the repository README and architecture map
 2. Document the authoritative backend repository and API contract
-3. Add CI for typecheck, lint, tests, build, accessibility, and dependency scanning
+3. Maintain typecheck, lint, build and dependency checks; complete integration and accessibility validation
 4. Define deployment, rollback, and production evidence
 
 ## Governance and safety
