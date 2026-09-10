@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "repository_id": 1221155447,
+  "current_repository": "appolon1908-hue/Frontend-Resturant-",
+  "target_repository_after_cutover": "appolon1908-hue/restaurant-frontend",
+  "status": "PREPARED_NOT_RENAMED",
+  "runtime_critical": true,
+  "current_runtime_state": "REQUIRES_PRE_CUTOVER_DISCOVERY",
+  "runtime_digest_evidence": "CURRENT_AND_ROLLBACK_WHEN_DEPLOYED_OTHERWISE_NOT_APPLICABLE",
+  "authority_role": "Restaurant customer and operations frontend",
+  "account_authority": "appolon1908-hue/documentaions:repository-name-migration.v1.json",
+  "policy": {
+    "current_repository_remains_operational": true,
+    "current_repository_bound_to_active_automation": true,
+    "target_repository_forbidden_in_automation_before_cutover": true,
+    "same_repository_id_required_after_cutover": true,
+    "historical_evidence_immutable": true,
+    "all_inventoried_integrations_require_post_rename_readback": true,
+    "runtime_digest_must_remain_unchanged_when_deployed": true,
+    "running_image_digest_must_remain_unchanged_when_deployed": true,
+    "rollback_image_digest_must_remain_unchanged_when_deployed": true,
+    "absent_runtime_digest_must_be_recorded_as_not_applicable": true,
+    "prechange_operation_state_must_be_recorded": true,
+    "success_path_must_restore_freeze_state": true,
+    "rollback_path_must_restore_freeze_state": true,
+    "success_path_must_restore_prechange_operation_state": true,
+    "rollback_path_must_restore_prechange_operation_state": true,
+    "rename_authorizes_deployment": false
+  }
+}

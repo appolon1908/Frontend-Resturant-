@@ -64,7 +64,7 @@ export interface Payment { id: number; restaurant_name: string; booking: number 
 export interface PaymentLedger { id: number; check_id: number; order_id: number; provider: PaymentProvider; kind: PaymentKind; status: PaymentStatus; currency?: string; amount: string; provider_payment_id?: string; paid_at: string | null; created_at: string; updated_at: string }
 export interface PaymentIntentResponse { payment_id: number; client_secret?: string; status?: PaymentStatus; checkout_url?: string; order_id?: number; amount?: string; currency?: string; provider?: PaymentProvider; return_url?: string; cancel_url?: string }
 export interface PaymentIntentCreateRequest { order_id?: number; check_id?: number; booking_id?: number; amount?: string; currency?: string; provider?: PaymentProvider; return_url?: string; cancel_url?: string }
-export interface PaymentSettleRequest { check_id?: number; order_id?: number; amount: string; currency?: string; provider?: PaymentProvider; idempotency_key: string; request_id: string }
+export interface PaymentSettleRequest { payment_id?: number; check_id?: number; order_id?: number; amount: string; currency?: string; provider?: PaymentProvider; idempotency_key: string; request_id: string }
 export interface RefundCreateRequest { amount: string; reason?: string; idempotency_key: string; request_id: string }
 export interface PaymentRefundResponse { payment_id?: number; refund_id?: string; status?: PaymentStatus; amount?: string; currency?: string; provider_refund_id?: string; [key: string]: unknown }
 

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { KitchenTicket, RealtimeEventEnvelope, RealtimeEventType } from '~/types/api'
+import type { RealtimeEventEnvelope, RealtimeEventType } from '~/types/api'
 
 interface ToastMessage {
   id: string
@@ -8,11 +8,28 @@ interface ToastMessage {
   tone: 'info' | 'success' | 'warning'
 }
 
-function isKitchenTicket(value: unknown): value is KitchenTicket {
-  if (!value || typeof value !== 'object') return false
+interface KitchenTicket {
+  id: number
+  title: string
+  subtitle?: string
+  status?: string
+}
 
-  const ticket = value as Record<string, unknown>
-  return typeof ticket.id === 'number' && typeof ticket.title === 'string'
+function toKitchenTicket(value: unknown): KitchenTicket | null {
+  if (!value || typeof value !== 'object') return null
+
+  const record = value as Record<string, unknown>
+  const id = Number(record.id)
+  const title = typeof record.title === 'string' ? record.title.trim() : ''
+
+  if (!Number.isInteger(id) || id <= 0 || !title) return null
+
+  return {
+    id,
+    title,
+    ...(typeof record.subtitle === 'string' ? { subtitle: record.subtitle } : {}),
+    ...(typeof record.status === 'string' ? { status: record.status } : {}),
+  }
 }
 
 export const useRealtimeStore = defineStore('realtime', {
@@ -76,13 +93,15 @@ export const useRealtimeStore = defineStore('realtime', {
           this.dashboardRefreshKey += 1
           this.pushToast({ title: 'Order update', body: 'Order queue changed.', tone: 'info' })
           break
-        case 'kitchen.ticket_created':
-          if (isKitchenTicket(event.payload?.ticket)) {
-            this.kitchenTickets.unshift(event.payload.ticket)
+        case 'kitchen.ticket_created': {
+          const ticket = toKitchenTicket(event.payload?.ticket)
+          if (ticket) {
+            this.kitchenTickets.unshift(ticket)
           }
           this.kitchenRefreshKey += 1
           this.pushToast({ title: 'Kitchen ticket', body: 'New kitchen ticket created.', tone: 'success' })
           break
+        }
         case 'kitchen.ticket_ready':
           this.kitchenRefreshKey += 1
           this.pushToast({ title: 'Ticket ready', body: 'A kitchen ticket is ready.', tone: 'info' })

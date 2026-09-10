@@ -1,89 +1,54 @@
 import { reservationsApi } from '~/api/reservations'
-import type { Reservation } from '~/types/api'
+import type { Reservation, ReservationTimeline, RestaurantBooking } from '~/types/api'
 
 export function useReservations() {
   const reservations = ref<Reservation[]>([])
-  const timeline = ref<Reservation[]>([])
-  const restaurantBookings = ref<Reservation[]>([])
+  const timeline = ref<ReservationTimeline[]>([])
+  const restaurantBookings = ref<RestaurantBooking[]>([])
   const count = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const { handleApiError } = useAuth()
 
-  async function fetchReservations(params?: { page?: number; page_size?: number; search?: string }) {
+  async function fetchReservations(params?: Parameters<typeof reservationsApi.list>[0]) {
     loading.value = true
     error.value = null
     try {
-      const result = await (reservationsApi as any).list(params)
-      if (Array.isArray(result)) {
-        reservations.value = result
-        count.value = result.length
-      } else {
-        reservations.value = result.results || []
-        count.value = result.count || reservations.value.length
-      }
-    } catch (e: any) {
-      error.value = e?.detail ?? e?.message ?? 'Failed to load reservations'
+      const result = await reservationsApi.list(params)
+      reservations.value = result.results
+      count.value = result.count
+    } catch (cause) {
+      error.value = handleApiError(cause, 'Failed to load reservations')
     } finally {
       loading.value = false
     }
   }
 
-  async function fetchTimeline(params?: { page?: number; page_size?: number }) {
-    const api = reservationsApi as any
-    if (typeof api.timeline === 'function') {
-      const result = await api.timeline(params)
-      timeline.value = Array.isArray(result) ? result : result.results || []
-    }
-  }
-
-  async function createReservation(payload: { restaurant: number; party_size: number; reservation_time: string }) {
-    return reservationsApi.create(payload)
-  }
-
-  async function cancelReservation(id: number) {
-    const api = reservationsApi as any
-    if (typeof api.cancel !== 'function') return null
-    const updated = await api.cancel(id)
-    const idx = reservations.value.findIndex((r) => r.id === id)
-    if (idx !== -1 && updated) reservations.value[idx] = updated
-    return updated
-  }
-
-  async function fetchRestaurantBookings(params?: { page?: number; page_size?: number }) {
-    const result = await (reservationsApi as any).restaurantList(params)
-    restaurantBookings.value = Array.isArray(result) ? result : result.results || []
+  async function fetchTimeline(params?: Parameters<typeof reservationsApi.timeline>[0]) {
+    const result = await reservationsApi.timeline(params)
+    timeline.value = result.results
     return result
   }
 
-  async function fetchToday() {
-    const api = reservationsApi as any
-    return typeof api.restaurantToday === 'function' ? api.restaurantToday() : []
+  async function cancelReservation(id: number) {
+    const updated = await reservationsApi.cancel(id)
+    const index = reservations.value.findIndex((reservation) => reservation.id === id)
+    if (index !== -1) reservations.value[index] = updated
+    return updated
   }
 
-  async function checkIn(id: number) {
-    const api = reservationsApi as any
-    return typeof api.checkIn === 'function' ? api.checkIn(id) : null
-  }
-
-  async function markNoShow(id: number) {
-    const api = reservationsApi as any
-    return typeof api.markNoShow === 'function' ? api.markNoShow(id) : null
+  async function fetchRestaurantBookings(params?: Parameters<typeof reservationsApi.restaurantList>[0]) {
+    const result = await reservationsApi.restaurantList(params)
+    restaurantBookings.value = result.results
+    return result
   }
 
   return {
-    reservations,
-    timeline,
-    restaurantBookings,
-    count,
-    loading,
-    error,
-    fetchReservations,
-    fetchTimeline,
-    createReservation,
-    cancelReservation,
-    fetchRestaurantBookings,
-    fetchToday,
-    checkIn,
-    markNoShow,
+    reservations, timeline, restaurantBookings, count, loading, error,
+    fetchReservations, fetchTimeline, cancelReservation, fetchRestaurantBookings,
+    createReservation: (payload: { restaurant: number; party_size: number; reservation_time: string }) => reservationsApi.create(payload),
+    fetchToday: () => reservationsApi.restaurantToday(),
+    checkIn: (id: number) => reservationsApi.checkIn(id),
+    markNoShow: (id: number) => reservationsApi.markNoShow(id),
   }
 }

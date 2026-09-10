@@ -30,11 +30,11 @@ export const paymentsApi = {
   },
 
   settle(payload: PaymentSettleRequest) {
-    return post<PaymentLedger>('/restaurant/payments/settle/', payload)
+    return post<Payment | PaymentLedger>('/restaurant/payments/settle/', payload)
   },
 
   refund(id: number, payload: RefundCreateRequest) {
-    return post<PaymentLedger>(`/restaurant/payments/${id}/refund/`, payload)
+    return post<Payment | PaymentLedger>(`/restaurant/payments/${id}/refund/`, payload)
   },
 
   restaurantList(params?: PaymentListParams) {
@@ -43,5 +43,17 @@ export const paymentsApi = {
 
   restaurantDetail(id: number) {
     return get<PaymentLedger>(`/restaurant/payments/${id}/`)
+  },
+  createOrderPaymentIntent(payload: PaymentIntentCreateRequest) {
+    return paymentsApi.createIntent(payload)
+  },
+  getPaymentStatus(id: number) {
+    return paymentsApi.getStatus(id)
+  },
+  settlePayment(payload: PaymentSettleRequest) {
+    return paymentsApi.settle(payload)
+  },
+  refundPayment(id: number, payload: RefundCreateRequest) {
+    return paymentsApi.refund(id, payload)
   },
 }

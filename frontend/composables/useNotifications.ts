@@ -1,55 +1,38 @@
 import { notificationsApi } from '~/api/notifications'
-import type { Notification } from '~/types/api'
+import type { Notification, StaffAlert } from '~/types/api'
 
 export function useNotifications() {
   const notifications = ref<Notification[]>([])
-  const staffAlerts = ref<Array<{ id: string; message: string; created_at: string }>>([])
-  const unreadCount = ref(0)
+  const staffAlerts = ref<StaffAlert[]>([])
+  const unreadCount = computed(() => notifications.value.filter((notification) => !notification.is_read).length)
   const loading = ref(false)
 
-  const fetchNotifications = async (params?: { page?: number; page_size?: number }) => {
+  async function fetchNotifications(params?: Parameters<typeof notificationsApi.list>[0]) {
     loading.value = true
     try {
-      const result = await (notificationsApi as any).list(params)
-      notifications.value = Array.isArray(result) ? result : result.results || []
-      unreadCount.value = notifications.value.filter((n) => !n.is_read).length
+      const result = await notificationsApi.list(params)
+      notifications.value = Array.isArray(result) ? result : result.results
     } finally {
       loading.value = false
     }
   }
 
-  const markRead = async (id: number) => {
+  async function markRead(id: number) {
     await notificationsApi.markRead(id)
-    const n = notifications.value.find((x) => x.id === id)
-    if (n) n.is_read = true
-    unreadCount.value = notifications.value.filter((x) => !x.is_read).length
+    const notification = notifications.value.find((item) => item.id === id)
+    if (notification) notification.is_read = true
   }
 
-  const markAllRead = async () => {
-    const api = notificationsApi as any
-    if (typeof api.markAllRead === 'function') {
-      await api.markAllRead()
-    }
-    notifications.value.forEach((n) => (n.is_read = true))
-    unreadCount.value = 0
+  async function markAllRead() {
+    await notificationsApi.markAllRead()
+    notifications.value.forEach((notification) => { notification.is_read = true })
   }
 
-  const fetchStaffAlerts = async (params?: { page?: number }) => {
-    const api = notificationsApi as any
-    if (typeof api.staffAlerts !== 'function') return { results: [] as typeof staffAlerts.value }
-    const result = await api.staffAlerts(params)
-    staffAlerts.value = result.results || []
+  async function fetchStaffAlerts(params?: Parameters<typeof notificationsApi.staffAlerts>[0]) {
+    const result = await notificationsApi.staffAlerts(params)
+    staffAlerts.value = result.results
     return result
   }
 
-  return {
-    notifications,
-    staffAlerts,
-    unreadCount,
-    loading,
-    fetchNotifications,
-    markRead,
-    markAllRead,
-    fetchStaffAlerts,
-  }
+  return { notifications, staffAlerts, unreadCount, loading, fetchNotifications, markRead, markAllRead, fetchStaffAlerts }
 }

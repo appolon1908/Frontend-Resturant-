@@ -17,43 +17,53 @@ export function usePayments() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  const { handleApiError } = useAuth()
+  let pending = 0
+
+  async function request<T>(action: () => Promise<T>): Promise<T> {
+    pending++
+    loading.value = true
+    error.value = null
+    try {
+      return await action()
+    } catch (cause) {
+      error.value = handleApiError(cause, 'Payment request failed.')
+      throw cause
+    } finally {
+      pending--
+      loading.value = pending > 0
+    }
+  }
+
   const createIntent = async (payload: PaymentIntentCreateRequest) => {
     error.value = null
-    latestIntent.value = await paymentsApi.createIntent(payload)
+    latestIntent.value = await request(() => paymentsApi.createIntent(payload))
     return latestIntent.value
   }
 
   const fetchPaymentStatus = async (paymentId: number) => {
     error.value = null
-    latestStatusPayment.value = await paymentsApi.getStatus(paymentId)
+    latestStatusPayment.value = await request(() => paymentsApi.getStatus(paymentId))
     return latestStatusPayment.value
   }
 
   const settlePayment = async (payload: PaymentSettleRequest) => {
     error.value = null
-    return paymentsApi.settle(payload)
+    return request(() => paymentsApi.settle(payload))
   }
 
   const refundPayment = async (paymentId: number, payload: RefundCreateRequest) => {
     error.value = null
-    return paymentsApi.refund(paymentId, payload)
+    return request(() => paymentsApi.refund(paymentId, payload))
   }
 
   const fetchRestaurantPayments = async (params?: PaymentListParams) => {
-    loading.value = true
-    error.value = null
-
-    try {
+    return request(async () => {
       const result = await paymentsApi.restaurantList(params)
       payments.value = result.results
       count.value = result.count
       return result
-    } catch (e: any) {
-      error.value = e?.detail ?? e?.message ?? 'Failed to load payments.'
-      throw e
-    } finally {
-      loading.value = false
-    }
+    })
   }
 
   return {

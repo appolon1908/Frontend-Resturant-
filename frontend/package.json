@@ -6,7 +6,7 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "typecheck": "nuxt prepare && tsc --noEmit -p tsconfig.json",
+    "typecheck": "nuxt typecheck",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -18,8 +18,10 @@
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.12.1",
     "@types/node": "^22.10.2",
+    "@typescript-eslint/parser": "^8.18.0",
     "eslint": "^9.16.0",
     "eslint-config-prettier": "^9.1.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vue-tsc": "^2.1.10"
   }
 }

@@ -2,7 +2,7 @@
 definePageMeta({ layout: 'restaurant' })
 
 import { reservationsApi } from '~/api/reservations'
-import type { Reservation } from '~/types/api'
+import type { RestaurantBooking } from '~/types/api'
 
 const restaurant = useRestaurantStore()
 const { handleApiError } = useAuth()
@@ -10,7 +10,7 @@ const { realtime, connect, disconnect } = useRealtime()
 
 const loading = ref(true)
 const error = ref('')
-const reservations = ref<Reservation[]>([])
+const reservations = ref<RestaurantBooking[]>([])
 
 async function fetchReservations() {
   loading.value = true
@@ -18,7 +18,7 @@ async function fetchReservations() {
 
   try {
     const result = await reservationsApi.restaurantList()
-    reservations.value = Array.isArray(result) ? result : result.results
+    reservations.value = result.results
   } catch (err) {
     error.value = handleApiError(err, 'Could not load reservation queue.')
   } finally {

@@ -1,5 +1,5 @@
 import { ordersApi } from '~/api/orders'
-import type { KitchenTicket, Order } from '~/types/api'
+import type { KitchenTicket, Order, OrderCreateRequest, OrderUpdateRequest } from '~/types/api'
 
 export function useOrders() {
   const orders = ref<Order[]>([])
@@ -7,67 +7,39 @@ export function useOrders() {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const kitchenTickets = ref<KitchenTicket[]>([])
+  const { handleApiError } = useAuth()
 
-  async function fetchOrders(params?: { page?: number; page_size?: number; search?: string }) {
+  async function fetchOrders(params?: Parameters<typeof ordersApi.list>[0]) {
     loading.value = true
     error.value = null
     try {
-      const result = await (ordersApi as any).list(params)
-      if (Array.isArray(result)) {
-        orders.value = result
-        count.value = result.length
-      } else {
-        orders.value = result.results || []
-        count.value = result.count || orders.value.length
-      }
-    } catch (e: any) {
-      error.value = e?.detail ?? e?.message ?? 'Failed to load orders'
+      const result = await ordersApi.list(params)
+      orders.value = result.results
+      count.value = result.count
+    } catch (cause) {
+      error.value = handleApiError(cause, 'Failed to load orders')
     } finally {
       loading.value = false
     }
   }
 
-  async function createOrder(payload: unknown) {
-    const api = ordersApi as any
-    return typeof api.create === 'function' ? api.create(payload) : null
-  }
-
-  async function fetchRestaurantQueue(params?: { page?: number; page_size?: number }) {
-    const result = await (ordersApi as any).restaurantQueue(params)
-    orders.value = Array.isArray(result) ? result : result.results || []
-    count.value = Array.isArray(result) ? result.length : result.count || orders.value.length
+  async function fetchRestaurantQueue(params?: Parameters<typeof ordersApi.restaurantQueue>[0]) {
+    const result = await ordersApi.restaurantQueue(params)
+    orders.value = result.results
+    count.value = result.count
     return result
   }
 
-  async function updateOrderStatus(id: number, payload: unknown) {
-    const api = ordersApi as any
-    return typeof api.updateStatus === 'function' ? api.updateStatus(id, payload) : null
-  }
-
-  async function fetchKitchenTickets(params?: { page?: number }) {
-    const api = ordersApi as any
-    if (typeof api.kitchenTickets !== 'function') return { results: [] as KitchenTicket[] }
-    const result = await api.kitchenTickets(params)
-    kitchenTickets.value = Array.isArray(result) ? result : result.results || []
+  async function fetchKitchenTickets(params?: Parameters<typeof ordersApi.kitchenTickets>[0]) {
+    const result = await ordersApi.kitchenTickets(params)
+    kitchenTickets.value = result.results
     return result
-  }
-
-  async function fireKitchen(order_id: number, course: number) {
-    const api = ordersApi as any
-    return typeof api.fireKitchen === 'function' ? api.fireKitchen({ order_id, course }) : null
   }
 
   return {
-    orders,
-    count,
-    loading,
-    error,
-    kitchenTickets,
-    fetchOrders,
-    createOrder,
-    fetchRestaurantQueue,
-    updateOrderStatus,
-    fetchKitchenTickets,
-    fireKitchen,
+    orders, count, loading, error, kitchenTickets, fetchOrders, fetchRestaurantQueue, fetchKitchenTickets,
+    createOrder: (payload: OrderCreateRequest) => ordersApi.create(payload),
+    updateOrderStatus: (id: number, payload: OrderUpdateRequest) => ordersApi.updateStatus(id, payload),
+    fireKitchen: (order_id: number, course: number) => ordersApi.fireKitchen({ order_id, course }),
   }
 }
