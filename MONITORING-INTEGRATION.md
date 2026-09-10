@@ -7,6 +7,8 @@ This repository is included in the shared design for **63 repositories and 17 mo
 - [Executable API contract](https://raw.githubusercontent.com/appolon1908-hue/Middleware-/cedaa23b89f84f365ae6789413411c3f01516952/contracts/observability/integrated-monitoring.openapi.json)
 - Local machine-readable onboarding record: [monitoring-integration.v1.json](monitoring-integration.v1.json)
 
+Repository identity is the immutable GitHub ID `1221155447`. Continue using `appolon1908-hue/Frontend-Resturant-` until GitHub readback verifies that same ID at `appolon1908-hue/restaurant-frontend`; the target name is a planned alias, not an active registration. Preserve service and evidence associations by repository ID through the controlled cutover described in [REPOSITORY_NAME_MIGRATION.md](REPOSITORY_NAME_MIGRATION.md).
+
 Middleware owns the monitoring API and remains the cross-system operational write boundary. Prometheus owns metrics, Loki logs, Tempo traces, Alertmanager routing, Backstage catalog discovery, Sentry application errors and Wazuh security observations. Grafana provides operational drilldowns. These responsibilities extend the existing collection pipeline without creating another writer or duplicating collectors.
 
 Before activation, enumerate this repository's deployable service units, approved environments, health/metrics paths and release OpenAPI artifacts. Register each service with tenant and deployment identity; source-only libraries and configuration repositories use CI/release/dependency evidence instead of invented health URLs. Empty `service_ids` deliberately means mapping is outstanding.
