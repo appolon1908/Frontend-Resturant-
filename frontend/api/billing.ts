@@ -60,6 +60,6 @@ export const billingApi = {
 
   // Legacy compat
   summary() {
-    return get<{ plan: string; renewal_date: string; balance: number }>('/restaurant/accounting/dashboard/today/')
+    return get<{ plan: string; renewal_date: string; balance: number }>('/restaurant/accounting/summary/')
   },
 }

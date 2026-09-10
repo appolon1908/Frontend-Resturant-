@@ -24,7 +24,10 @@ async function fetchDashboard() {
 await fetchDashboard()
 
 if (import.meta.client) {
-  connect({ restaurantId: restaurant.activeRestaurantId ?? undefined })
+  watch(() => restaurant.activeRestaurantId, (restaurantId) => {
+    disconnect()
+    if (restaurantId) connect({ restaurantId })
+  }, { immediate: true })
 }
 
 watch(

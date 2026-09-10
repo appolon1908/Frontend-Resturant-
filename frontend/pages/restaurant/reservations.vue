@@ -29,7 +29,10 @@ async function fetchReservations() {
 await fetchReservations()
 
 if (import.meta.client) {
-  connect({ restaurantId: restaurant.activeRestaurantId ?? undefined })
+  watch(() => restaurant.activeRestaurantId, (restaurantId) => {
+    disconnect()
+    if (restaurantId) connect({ restaurantId })
+  }, { immediate: true })
 }
 
 watch(

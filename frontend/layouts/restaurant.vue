@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { auth } = useAuth()
+const restaurant = useRestaurantStore()
 
 const links = [
   { to: '/restaurant/dashboard', label: 'Dashboard' },
@@ -51,6 +52,7 @@ if (import.meta.client) {
         </div>
       </header>
       <div class="page-shell py-4 md:py-7">
+        <p v-if="restaurant.contextError" class="error-banner">{{ restaurant.contextError }}</p>
         <slot />
       </div>
     </main>

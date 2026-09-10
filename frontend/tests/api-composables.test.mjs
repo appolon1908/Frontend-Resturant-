@@ -5,14 +5,15 @@ import vm from 'node:vm'
 import ts from 'typescript'
 import { ref } from 'vue'
 
-function load(name, clients) {
+function load(name, clients, globals = {}) {
   const source = readFileSync(new URL(`../composables/${name}.ts`, import.meta.url), 'utf8')
+    .replaceAll('import.meta.client', 'true')
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   })
   const exports = {}
   vm.runInNewContext(outputText, {
-    exports, ref,
+    ...globals, exports, ref,
     useAuth: () => ({ handleApiError: (error) => error.message }),
     require: (name) => {
       assert.ok(name in clients, `Unexpected import: ${name}`)
@@ -98,4 +99,82 @@ test('billing checkout returns the service response rather than an empty success
     } } },
   })
   assert.equal(await api.createCheckoutSession(payload), response)
+})
+
+async function authContext(getRestaurant) {
+  const pinia = await import('pinia')
+  const source = readFileSync(new URL('../stores/auth.ts', import.meta.url), 'utf8')
+    .replaceAll('import.meta.client', 'false')
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  })
+  const restaurant = {
+    activeRestaurantId: null, contextError: '',
+    setActiveRestaurantId(id) { this.activeRestaurantId = id },
+  }
+  const modules = {
+    pinia,
+    '~/api/auth': { authApi: {} },
+    '~/api/restaurant': { restaurantApi: { me: getRestaurant } },
+    '~/api/client': { setAccessToken() {} },
+  }
+  const exports = {}
+  vm.runInNewContext(outputText, {
+    exports,
+    useRestaurantStore: () => restaurant,
+    require: (name) => { assert.ok(name in modules); return modules[name] },
+  })
+  const auth = exports.useAuthStore(pinia.createPinia())
+  auth.token = 'test-session'
+  auth.user = { id: 12, role: 'restaurant' }
+  return { auth, restaurant }
+}
+
+test('restaurant context uses the backend restaurant ID, independently of user ID', async () => {
+  const { auth, restaurant } = await authContext(async () => ({ id: 57 }))
+  await auth.syncRestaurantContext()
+  assert.equal(restaurant.activeRestaurantId, 57)
+  assert.equal(restaurant.contextError, '')
+})
+
+test('an outdated restaurant profile response cannot restore a cleared session context', async () => {
+  let finish
+  const { auth, restaurant } = await authContext(() => new Promise((resolve) => { finish = resolve }))
+  const pending = auth.syncRestaurantContext()
+  auth.token = ''
+  auth.user = null
+  await auth.syncRestaurantContext()
+  finish({ id: 57 })
+  await pending
+  assert.equal(restaurant.activeRestaurantId, null)
+})
+
+test('realtime reconnects close the previous socket and cancel timers on teardown', () => {
+  const sockets = []
+  const timers = new Map()
+  let timerId = 0
+  class Socket {
+    constructor() { sockets.push(this); this.closed = false }
+    close() { this.closed = true }
+  }
+  const realtime = {
+    reconnectAttempt: 0,
+    setConnected() {}, setConnecting() {},
+  }
+  const api = load('useRealtime', {}, {
+    WebSocket: Socket,
+    useAuthStore: () => ({ token: 'test-session' }),
+    useRealtimeStore: () => realtime,
+    useRuntimeConfig: () => ({ public: { apiBaseUrl: 'https://api.example.test/api/v1' } }),
+    useState: (_, init) => ref(init()),
+    setTimeout: (callback) => { timers.set(++timerId, callback); return timerId },
+    clearTimeout: (id) => timers.delete(id),
+  })
+  api.connect({ restaurantId: 57 })
+  api.connect({ restaurantId: 57 })
+  assert.equal(sockets[0].closed, true)
+  sockets[1].onclose()
+  assert.equal(timers.size, 1)
+  api.disconnect()
+  assert.equal(timers.size, 0)
 })

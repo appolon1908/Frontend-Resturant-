@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { AuthUser } from '~/types/api'
 import { authApi } from '~/api/auth'
+import { restaurantApi } from '~/api/restaurant'
 import { setAccessToken } from '~/api/client'
 
 const STORAGE_KEY = 'restaurant_booking_auth'
@@ -16,11 +17,24 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => Boolean(state.token),
   },
   actions: {
-    syncRestaurantContext() {
+    async syncRestaurantContext() {
       const restaurantStore = useRestaurantStore()
-      restaurantStore.setActiveRestaurantId(
-        this.user?.role === 'restaurant' && this.user?.id ? this.user.id : null,
-      )
+      const token = this.token
+      restaurantStore.setActiveRestaurantId(null)
+      restaurantStore.contextError = ''
+      if (!token || this.user?.role !== 'restaurant') return
+      try {
+        const restaurant = await restaurantApi.me()
+        if (this.token !== token) return
+        if (!Number.isInteger(restaurant.id) || restaurant.id <= 0) {
+          throw new Error('Restaurant profile has no valid identity.')
+        }
+        restaurantStore.setActiveRestaurantId(restaurant.id)
+      } catch (cause) {
+        if (this.token === token) {
+          restaurantStore.contextError = this.handleApiError(cause, 'Unable to load restaurant context.')
+        }
+      }
     },
 
     hydrate() {

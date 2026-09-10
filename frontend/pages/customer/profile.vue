@@ -2,6 +2,7 @@
 definePageMeta({ layout: 'customer' })
 
 import { authApi } from '~/api/auth'
+import type { AuthUser } from '~/types/api'
 
 type SessionRow = {
   id: number
@@ -13,7 +14,7 @@ const { auth, logout, handleApiError } = useAuth()
 
 const loading = ref(true)
 const error = ref('')
-const me = ref<any | null>(null)
+const me = ref<AuthUser | null>(null)
 const sessions = ref<SessionRow[]>([])
 const revokingId = ref<number | null>(null)
 
@@ -97,7 +98,7 @@ const currentSession = computed(() => sessions.value.find((session) => session.i
       <AppSkeleton :lines="2" />
     </div>
 
-    <template v-else>
+    <template v-else-if="!error">
       <AppCard>
         <h2 class="mb-4 text-lg font-semibold text-slate-900">
           Account

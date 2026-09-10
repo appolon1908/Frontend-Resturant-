@@ -8,6 +8,7 @@ type ActiveRestaurant = {
 
 export const useRestaurantStore = defineStore('restaurant', {
   state: () => ({
+    contextError: '',
     dashboard: null as DashboardSummary | null,
     activeRestaurant: null as ActiveRestaurant | null,
   }),
@@ -22,7 +23,7 @@ export const useRestaurantStore = defineStore('restaurant', {
     },
 
     setActiveRestaurantId(id: number | null) {
-      this.activeRestaurant = id ? { id } : null
+      this.activeRestaurant = id !== null && Number.isInteger(id) && id > 0 ? { id } : null
     },
   },
 })

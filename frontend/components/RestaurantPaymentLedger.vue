@@ -32,7 +32,10 @@ async function load(params?: PaymentListParams) {
 await load()
 
 if (import.meta.client) {
-  connect({ restaurantId: restaurant.activeRestaurantId ?? undefined })
+  watch(() => restaurant.activeRestaurantId, (restaurantId) => {
+    disconnect()
+    if (restaurantId) connect({ restaurantId })
+  }, { immediate: true })
 }
 
 watch(statusFilter, (status) => {
@@ -62,18 +65,16 @@ async function lookupStatus() {
   }
 }
 
-const totalSettled = computed(() =>
+const settledCount = computed(() =>
   payments.value
     .filter((p) => p.status === 'succeeded' || p.status === 'captured')
-    .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-    .toFixed(2),
+    .length,
 )
 
-const totalRefunded = computed(() =>
+const refundedCount = computed(() =>
   payments.value
     .filter((p) => p.status === 'refunded' || p.status === 'partially_refunded')
-    .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-    .toFixed(2),
+    .length,
 )
 
 const STATUS_FILTERS: Array<{ label: string; value: PaymentStatus | '' }> = [
@@ -111,16 +112,16 @@ const STATUS_FILTERS: Array<{ label: string; value: PaymentStatus | '' }> = [
 
     <div class="card-grid sm:grid-cols-3">
       <DashboardMetricCard
-        label="Transactions shown"
+        label="Matching transactions"
         :value="count"
       />
       <DashboardMetricCard
-        label="Settled"
-        :value="`$${totalSettled}`"
+        label="Settled transactions shown"
+        :value="settledCount"
       />
       <DashboardMetricCard
-        label="Refunded"
-        :value="`$${totalRefunded}`"
+        label="Refunded transactions shown"
+        :value="refundedCount"
       />
     </div>
 

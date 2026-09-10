@@ -13,7 +13,6 @@ type BillingSummary = {
   plan?: string
   renewal_date?: string
   balance?: number
-  revenue_this_month?: number
 }
 
 async function loadAccounting() {
@@ -37,11 +36,13 @@ await loadAccounting()
 const billingSummary = computed(() => (summary.value ?? {}) as BillingSummary)
 const invoiceRows = computed(() => (invoices.value ?? []) as Invoice[])
 
-function formatCurrency(value: number | string | null | undefined) {
-  const amount = Number(value || 0)
+function formatCurrency(value: number | string | null | undefined, currency = 'USD') {
+  if (value == null || value === '') return '—'
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return '—'
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     minimumFractionDigits: 2,
   }).format(amount)
 }
@@ -52,25 +53,6 @@ function formatDate(value: string | null | undefined) {
   if (Number.isNaN(d.getTime())) return value
   return d.toLocaleDateString()
 }
-
-function isCurrentMonth(value: string | null | undefined) {
-  if (!value) return false
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return false
-
-  const now = new Date()
-  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-}
-
-const revenueThisMonth = computed(() => {
-  if (billingSummary.value.revenue_this_month != null) {
-    return Number(billingSummary.value.revenue_this_month)
-  }
-
-  return invoiceRows.value
-    .filter((invoice) => invoice.status === 'paid' && isCurrentMonth(invoice.created_at))
-    .reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0)
-})
 
 const recentPaidInvoices = computed(() =>
   invoiceRows.value
@@ -145,10 +127,10 @@ const recentPaidInvoices = computed(() =>
 
         <AppCard>
           <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Revenue this month
+            Paid invoices shown
           </p>
           <p class="mt-2 text-xl font-semibold text-slate-900">
-            {{ formatCurrency(revenueThisMonth) }}
+            {{ invoiceRows.filter((invoice) => invoice.status === 'paid').length }}
           </p>
         </AppCard>
       </div>
@@ -184,7 +166,7 @@ const recentPaidInvoices = computed(() =>
                   #{{ invoice.id }}
                 </td>
                 <td class="px-4 py-3 text-right font-medium text-slate-800">
-                  {{ formatCurrency(invoice.amount) }}
+                  {{ formatCurrency(invoice.amount, invoice.currency) }}
                 </td>
                 <td class="px-4 py-3">
                   <AppBadge tone="green">
