@@ -13,6 +13,12 @@ export function useRealtime() {
   const config = useRuntimeConfig()
   const socket = useState<WebSocket | null>('realtime-socket', () => null)
   const manualClose = useState('realtime-manual-close', () => false)
+  const reconnectTimer = useState<ReturnType<typeof setTimeout> | null>('realtime-reconnect-timer', () => null)
+
+  function cancelReconnect() {
+    if (reconnectTimer.value !== null) clearTimeout(reconnectTimer.value)
+    reconnectTimer.value = null
+  }
 
   function endpoint(scope: { restaurantId?: number; customerId?: number }) {
     const apiBase = String(config.public.apiBaseUrl || '')
@@ -29,6 +35,7 @@ export function useRealtime() {
       socket.value.onclose = null
       socket.value.onerror = null
       socket.value.onmessage = null
+      socket.value.close()
       socket.value = null
     }
   }
@@ -37,7 +44,11 @@ export function useRealtime() {
     if (manualClose.value) return
     realtime.reconnectAttempt += 1
     const delay = Math.min(1000 * 2 ** (realtime.reconnectAttempt - 1), 30000)
-    setTimeout(() => connect(scope), delay)
+    cancelReconnect()
+    reconnectTimer.value = setTimeout(() => {
+      reconnectTimer.value = null
+      if (!manualClose.value) connect(scope)
+    }, delay)
   }
 
   function connect(scope: { restaurantId?: number; customerId?: number }) {
@@ -45,6 +56,7 @@ export function useRealtime() {
     const url = endpoint(scope)
     if (!url) return
 
+    cancelReconnect()
     manualClose.value = false
     realtime.setConnecting(true)
 
@@ -77,7 +89,7 @@ export function useRealtime() {
 
   function disconnect() {
     manualClose.value = true
-    if (socket.value) socket.value.close()
+    cancelReconnect()
     realtime.setConnected(false)
     cleanup()
   }

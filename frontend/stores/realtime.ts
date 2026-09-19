@@ -39,11 +39,23 @@ export const useRealtimeStore = defineStore('realtime', {
     reconnectAttempt: 0,
     lastEventType: '' as RealtimeEventType | '',
     lastEventAt: '' as string,
+    dashboardRefreshKey: 0,
+    reservationRefreshKey: 0,
+    ordersRefreshKey: 0,
+    kitchenRefreshKey: 0,
+    checkoutRefreshKey: 0,
     kitchenTickets: [] as KitchenTicket[],
     tableStatuses: {} as Record<string, string>,
     staffAlerts: [] as Array<{ id: string; message: string; created_at: string }>,
     toasts: [] as ToastMessage[],
   }),
+  getters: {
+    status: (state): 'connected' | 'connecting' | 'disconnected' => {
+      if (state.connected) return 'connected'
+      if (state.connecting) return 'connecting'
+      return 'disconnected'
+    },
+  },
   actions: {
     setConnected(value: boolean) {
       this.connected = value
@@ -53,45 +65,55 @@ export const useRealtimeStore = defineStore('realtime', {
     setConnecting(value: boolean) {
       this.connecting = value
     },
+    setKitchenTickets(tickets: KitchenTicket[]) {
+      this.kitchenTickets = [...tickets]
+    },
     pushToast(message: Omit<ToastMessage, 'id'>) {
       const toast = { ...message, id: crypto.randomUUID() }
       this.toasts.unshift(toast)
       setTimeout(() => this.removeToast(toast.id), 5000)
     },
     removeToast(id: string) {
-      this.toasts = this.toasts.filter((toast) => toast.id !== id)
+      this.toasts = this.toasts.filter((t) => t.id !== id)
     },
-    handleEvent(event: RealtimeEventEnvelope) {
+    applyEvent(event: RealtimeEventEnvelope) {
       this.lastEventType = event.type
       this.lastEventAt = new Date().toISOString()
 
       switch (event.type) {
         case 'reservation.created':
-          this.pushToast({ title: 'New reservation', body: 'A new reservation was created.', tone: 'success' })
+        case 'reservation.updated':
+          this.reservationRefreshKey += 1
+          this.dashboardRefreshKey += 1
+          this.pushToast({ title: 'Reservation update', body: 'Reservation data changed.', tone: 'success' })
           break
         case 'order.created':
-          this.pushToast({ title: 'New order', body: 'A new order entered the queue.', tone: 'success' })
-          break
         case 'order.status_changed':
-          this.pushToast({ title: 'Order update', body: 'An order status changed.', tone: 'info' })
+          this.ordersRefreshKey += 1
+          this.dashboardRefreshKey += 1
+          this.pushToast({ title: 'Order update', body: 'Order queue changed.', tone: 'info' })
           break
         case 'kitchen.ticket_created': {
-          const ticket = toKitchenTicket(event.payload.ticket)
+          const ticket = toKitchenTicket(event.payload?.ticket)
           if (ticket) {
             this.kitchenTickets.unshift(ticket)
           }
+          this.kitchenRefreshKey += 1
           this.pushToast({ title: 'Kitchen ticket', body: 'New kitchen ticket created.', tone: 'success' })
           break
         }
         case 'kitchen.ticket_ready':
+          this.kitchenRefreshKey += 1
           this.pushToast({ title: 'Ticket ready', body: 'A kitchen ticket is ready.', tone: 'info' })
           break
         case 'table.status_changed':
-          if (event.payload.table_id && event.payload.status) {
+          if (event.payload?.table_id && event.payload?.status) {
             this.tableStatuses[String(event.payload.table_id)] = String(event.payload.status)
           }
           break
         case 'payment.succeeded':
+          this.checkoutRefreshKey += 1
+          this.dashboardRefreshKey += 1
           this.pushToast({ title: 'Payment complete', body: 'A payment was completed.', tone: 'success' })
           break
         case 'waitlist.called':
@@ -99,13 +121,16 @@ export const useRealtimeStore = defineStore('realtime', {
           break
         case 'staff.alert_created':
           this.staffAlerts.unshift({
-            id: String(event.payload.id || crypto.randomUUID()),
-            message: String(event.payload.message || 'New staff alert.'),
+            id: String(event.payload?.id || crypto.randomUUID()),
+            message: String(event.payload?.message || 'New staff alert.'),
             created_at: new Date().toISOString(),
           })
           this.pushToast({ title: 'Staff alert', body: 'New staff alert received.', tone: 'warning' })
           break
       }
+    },
+    handleEvent(event: RealtimeEventEnvelope) {
+      this.applyEvent(event)
     },
   },
 })

@@ -21,11 +21,11 @@ export function getBaseUrl() {
   return String(config.public.apiBaseUrl || 'http://localhost:8000/api/v1')
 }
 
-export function buildQueryString(query?: Record<string, QueryValue>) {
+export function buildQueryString(query?: object) {
   if (!query) return ''
   const params = new URLSearchParams()
 
-  for (const [key, value] of Object.entries(query)) {
+  for (const [key, value] of Object.entries(query as Record<string, QueryValue>)) {
     if (value !== undefined && value !== null && value !== '') {
       params.append(key, String(value))
     }
@@ -35,7 +35,7 @@ export function buildQueryString(query?: Record<string, QueryValue>) {
   return output ? `?${output}` : ''
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit & { query?: Record<string, QueryValue> } = {}): Promise<T> {
+export async function apiFetch<T>(path: string, options: RequestInit & { query?: object } = {}): Promise<T> {
   const requestId = crypto.randomUUID()
   const url = `${getBaseUrl()}${path}${buildQueryString(options.query)}`
 
@@ -63,11 +63,11 @@ export async function apiFetch<T>(path: string, options: RequestInit & { query?:
   return (await res.json()) as T
 }
 
-export const get = <T>(p: string, query?: Record<string, QueryValue>) => apiFetch<T>(p, { method: 'GET', query })
-export const post = <T>(p: string, b?: unknown, query?: Record<string, QueryValue>) =>
+export const get = <T>(p: string, query?: object) => apiFetch<T>(p, { method: 'GET', query })
+export const post = <T>(p: string, b?: unknown, query?: object) =>
   apiFetch<T>(p, { method: 'POST', body: b ? JSON.stringify(b) : undefined, query })
-export const put = <T>(p: string, b?: unknown, query?: Record<string, QueryValue>) =>
+export const put = <T>(p: string, b?: unknown, query?: object) =>
   apiFetch<T>(p, { method: 'PUT', body: b ? JSON.stringify(b) : undefined, query })
-export const patch = <T>(p: string, b?: unknown, query?: Record<string, QueryValue>) =>
+export const patch = <T>(p: string, b?: unknown, query?: object) =>
   apiFetch<T>(p, { method: 'PATCH', body: b ? JSON.stringify(b) : undefined, query })
-export const del = <T>(p: string, query?: Record<string, QueryValue>) => apiFetch<T>(p, { method: 'DELETE', query })
+export const del = <T>(p: string, query?: object) => apiFetch<T>(p, { method: 'DELETE', query })
