@@ -16,6 +16,6 @@ function tone(status: string) {
       <AppBadge :tone="tone(order.status)">{{ order.status }}</AppBadge>
     </div>
     <p class="mt-2 text-sm text-slate-500">{{ order.items.length }} item(s)</p>
-    <p class="mt-1 text-base font-semibold text-slate-800">${{ order.total.toFixed(2) }}</p>
+    <p class="mt-1 text-base font-semibold text-slate-800">{{ order.total == null ? 'Total unavailable' : `$${order.total.toFixed(2)}` }}</p>
   </AppCard>
 </template>

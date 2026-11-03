@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Reservation } from '~/types/api'
-defineProps<{ reservation: Reservation }>()
+import type { Reservation, RestaurantBooking } from '~/types/api'
+defineProps<{ reservation: Reservation | RestaurantBooking }>()
 
 function toneForStatus(status: string) {
   if (status === 'confirmed' || status === 'completed') return 'green'
@@ -13,8 +13,8 @@ function toneForStatus(status: string) {
   <AppCard>
     <div class="flex items-start justify-between gap-2">
       <div>
-        <p class="font-semibold">{{ reservation.restaurant_name || 'Restaurant' }}</p>
-        <p class="mt-1 text-sm text-slate-500">{{ reservation.reservation_time }}</p>
+        <p class="font-semibold">{{ 'restaurant_name' in reservation ? reservation.restaurant_name : reservation.guest_name }}</p>
+        <p class="mt-1 text-sm text-slate-500">{{ `${reservation.booking_date} ${reservation.booking_time}` }}</p>
         <p class="mt-1 text-xs text-slate-500">Party size: {{ reservation.party_size }}</p>
       </div>
       <AppBadge :tone="toneForStatus(reservation.status)">{{ reservation.status }}</AppBadge>

@@ -4,15 +4,18 @@ import { ordersApi } from '~/api/orders'
 
 definePageMeta({ layout: 'restaurant' })
 
-const { auth, handleApiError } = useAuth()
+const { handleApiError } = useAuth()
+const restaurant = useRestaurantStore()
 const { realtime, connect, disconnect } = useRealtime()
 const loading = ref(true)
 const error = ref('')
 const orders = ref<Order[]>([])
 
 async function fetchQueue() {
+  loading.value = true
+  error.value = ''
   try {
-    orders.value = await ordersApi.restaurantQueue()
+    orders.value = (await ordersApi.restaurantQueue()).results
   } catch (err) {
     error.value = handleApiError(err, 'Unable to load order queue.')
   } finally {
@@ -22,9 +25,11 @@ async function fetchQueue() {
 
 await fetchQueue()
 
-const restaurantId = computed(() => Number(auth.user?.id || 0))
-if (import.meta.client && restaurantId.value) {
-  connect({ restaurantId: restaurantId.value })
+if (import.meta.client) {
+  watch(() => restaurant.activeRestaurantId, (restaurantId) => {
+    disconnect()
+    if (restaurantId) connect({ restaurantId })
+  }, { immediate: true })
 }
 
 watch(

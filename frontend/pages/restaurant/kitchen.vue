@@ -1,22 +1,35 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'restaurant' })
-const { auth } = useAuth()
+const { handleApiError } = useAuth()
+const restaurant = useRestaurantStore()
 const { realtime, connect, disconnect } = useRealtime()
+const { kitchenTickets, fetchKitchenTickets } = useOrders()
+const error = ref('')
 
-const defaultTickets = [
-  { id: 1, title: 'Ticket #101', subtitle: '2x Pasta, 1x Soup', status: 'preparing' },
-  { id: 2, title: 'Ticket #102', subtitle: '1x Burger, 1x Salad', status: 'queued' },
-]
-
-if (!realtime.kitchenTickets.length) {
-  realtime.kitchenTickets = [...defaultTickets]
+async function loadTickets() {
+  error.value = ''
+  try {
+    await fetchKitchenTickets()
+    realtime.setKitchenTickets(kitchenTickets.value.map((ticket) => ({
+      id: ticket.id,
+      title: `Order #${ticket.order}, course ${ticket.course}`,
+      subtitle: ticket.items.map((item) => item.menu_item_name).join(', '),
+      status: ticket.status,
+    })))
+  } catch (cause) {
+    error.value = handleApiError(cause, 'Unable to load kitchen tickets.')
+  }
 }
 
-const restaurantId = computed(() => Number(auth.user?.id || 0))
-if (import.meta.client && restaurantId.value) {
-  connect({ restaurantId: restaurantId.value })
-}
+await loadTickets()
+watch(() => realtime.kitchenRefreshKey, loadTickets)
 
+if (import.meta.client) {
+  watch(() => restaurant.activeRestaurantId, (restaurantId) => {
+    disconnect()
+    if (restaurantId) connect({ restaurantId })
+  }, { immediate: true })
+}
 onBeforeUnmount(() => {
   disconnect()
 })
@@ -29,6 +42,7 @@ onBeforeUnmount(() => {
       <AppBadge :tone="realtime.connected ? 'green' : 'orange'">{{ realtime.connected ? 'Live' : 'Offline' }}</AppBadge>
     </div>
 
+    <p v-if="error" class="error-banner">{{ error }}</p>
     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       <KitchenTicketCard
         v-for="ticket in realtime.kitchenTickets"

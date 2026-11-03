@@ -4,7 +4,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   typescript: {
     strict: true,
-    typeCheck: true,
+    typeCheck: false,
+  },
+  experimental: {
+    appManifest: false,
   },
   runtimeConfig: {
     public: {

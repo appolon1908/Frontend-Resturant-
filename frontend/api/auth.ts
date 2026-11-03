@@ -1,5 +1,5 @@
 import { post, get, del } from '~/api/client'
-import type { TokenPair, TokenRefreshRequest, RegisterRequest } from '~/types/api'
+import type { AuthUser, TokenPair, TokenRefreshRequest, RegisterRequest } from '~/types/api'
 
 export const authApi = {
   login(emailOrPayload: string | { email: string; password: string }, password?: string) {
@@ -35,6 +35,6 @@ export const authApi = {
   },
 
   me() {
-    return get('/auth/me/')
+    return get<AuthUser>('/auth/me/')
   },
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { paymentsApi } from '~/api/payments'
-import type { Payment } from '~/types/api'
+import type { Payment, PaymentLedger } from '~/types/api'
 
 definePageMeta({ layout: 'restaurant' })
 
@@ -8,7 +8,7 @@ const { handleApiError } = useAuth()
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
-const currentPayment = ref<Payment | null>(null)
+const currentPayment = ref<Payment | PaymentLedger | null>(null)
 
 const statusPaymentId = ref<number | null>(null)
 const settleForm = reactive({
@@ -149,5 +149,6 @@ async function refundPayment() {
       <p class="text-sm text-slate-600">{{ currentPayment.amount }} {{ currentPayment.currency || 'USD' }} · {{ currentPayment.provider }}</p>
       <p class="text-xs text-slate-500">Created {{ currentPayment.created_at }}</p>
     </AppCard>
+    <RestaurantPaymentLedger />
   </section>
 </template>
